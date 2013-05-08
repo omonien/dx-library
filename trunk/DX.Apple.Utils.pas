@@ -150,7 +150,8 @@ procedure NSLog2(const AMessage: string);
 var
   LMessage: NSString;
 begin
-  LMessage := NSSTR(FormatDateTime('hh:nn:ss,zzz', now) + ' - ' + AMessage);
+  //NSLog actually already logs the current time - but not including milliseconds, which is why we add a "full" timestamp here
+  LMessage := NSSTR('('+FormatDateTime('hh:nn:ss,zzz', now) + ') - ' + AMessage);
   iOSApi.Foundation.NSLog(PtrForObject(LMessage));
 end;
 
