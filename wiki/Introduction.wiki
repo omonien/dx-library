@@ -1,12 +1,8 @@
-#summary dx-library contains various helpers and utilities for Delphi, with a special focus on cross platform development.
-
 = Introduction =
 
-With Delphi XE4 Embarcadero opened Delphi to support mobile devices. They built a new "NextGen" compiler to support ARM devices such as the iPhone and later Androids.
+DX.Library contains the following units:
 
-The RTL and FireMonkey were massively expanded to support this new compiler and the cross platform scenario. There still room for utilities though that make your life easier. This is where DX.Library jumps in.
-
-We will provide more and more utility functions and special platform imports with that library. 
+ 
 
 
 = Details =
