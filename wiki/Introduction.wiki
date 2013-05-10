@@ -1,4 +1,4 @@
-= Introduction =
+= Documentation =
 
 DX.Library contains the following units:
 
