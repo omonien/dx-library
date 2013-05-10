@@ -2,11 +2,11 @@
 
 DX.Library contains the following units:
 
- * DX.Apple.Utils (various helper functions)
-* DX.Rest.Client (an abstract REST Client)
-* DX.Types.GeoLocation (GeoLocation datatype that maps to MS SQL Server's Geography type)
-* DX.Types.Nullable (A Nullable type for Delphi. Credits: Stefan Glienke )
-* DX.Utils.Json (a helper unit for JSON processing with DBXJson)
+ * DX.Apple.Utils (Various helper functions)
+ * DX.Rest.Client (Provides an abstract REST Client)
+ * DX.Types.GeoLocation (Provides a TGeoLocation datatype that maps to MS SQL Server's Geography type)
+ * DX.Types.Nullable (Provides a Nullable type for Delphi. Credits: Stefan Glienke )
+ * DX.Utils.Json (A helper unit for JSON processing with DBXJson)
 
 
 More docs and samples will follow. 
