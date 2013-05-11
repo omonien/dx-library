@@ -44,7 +44,7 @@ uses
 
 type
 
-  Nullable<T> = record
+  Nullable<T> = class
   private
     FValue: T;
     FHasValue: string;
@@ -61,6 +61,7 @@ type
     property HasValue: Boolean read GetHasValue;
     property Value: T read GetValue;
 
+    (*
     class operator Implicit(const Value: Nullable<T>): T;
     class operator Implicit(const Value: Nullable<T>): Variant;
     class operator Implicit(const Value: Pointer): Nullable<T>;
@@ -68,7 +69,12 @@ type
     class operator Implicit(const Value: Variant): Nullable<T>;
     class operator Equal(const Left, Right: Nullable<T>): Boolean;
     class operator NotEqual(const Left, Right: Nullable<T>): Boolean;
+    *)
   end;
+
+/// ATTENTION !!!
+///  Nullable is currently in flux!!!
+
 
 {$IF CompilerVersion = 21}
 
@@ -140,6 +146,7 @@ begin
   Result := GetValueOrDefault(Default (T));
 end;
 
+(*
 class operator Nullable<T>.Implicit(const Value: Nullable<T>): T;
 begin
   Result := Value.Value;
@@ -181,4 +188,5 @@ begin
   Result := not Left.Equals(Right);
 end;
 
+*)
 end.

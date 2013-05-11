@@ -17,22 +17,31 @@ uses
 type
   TDXJson = class(TObject)
   private
+    class var FID: Integer;
     class function InjectMetaData(AJsonObject: TJSONObject; AClassName: string): TJSONObject;
     class function RemoveMetaData(AJsonObject: TJSONObject): TJSONObject;
-    class procedure RegisterConverters(AMarshaler:TJSONMarshal);
+    class procedure RegisterConverters(AMarshaler: TJSONMarshal);
+    class procedure RegisterReverters(AUnMarshaler: TJSONUnMarshal); static;
   public
     class function ObjectToJson(AObject: TObject): string;
     class function JsonToObject<T: class>(AJson: string): T;
+    class function GetNextID: Integer;
   end;
 
 implementation
 
 uses
   Data.DBXPlatform, Data.DBXJsonCommon, Rtti,
-  DX.Types.Nullable;
+  DX.Types.Nullable,
+  System.SysUtils;
 
 // Create JsonRelect meta data block. This is sort of a hack, as DBXJsonReflect relies on Metadata
 // We are processing "plain" Json though - without any meta data
+class function TDXJson.GetNextID: Integer;
+begin
+  result := AtomicIncrement(FID);
+end;
+
 class function TDXJson.InjectMetaData(AJsonObject: TJSONObject; AClassName: string): TJSONObject;
 var
   LJSONObject: TJSONObject;
@@ -46,6 +55,7 @@ var
   LClassNameOfInnerObject: string;
   LClassname: string;
   i: Integer;
+  LObjectID: Integer;
 begin
   // Check inner objects recursively
   for LPair in AJsonObject do
@@ -74,7 +84,8 @@ begin
   end;
 
   // Outer object
-  LJSONObject := TJSONObject.ParseJSONValue('{"type":"","id":0,"fields":{}}') as TJSONObject;
+  LObjectID := GetNextID;   //We really don't care about object references in this scenario
+  LJSONObject := TJSONObject.ParseJSONValue(Format('{"type":"","id":%d,"fields":{}}', [LObjectID])) as TJSONObject;
   LValue := TJSONString.Create(AClassName);
   LJSONObject.Get('type').JsonValue := LValue;
   // Assign actual payload
@@ -82,17 +93,55 @@ begin
   result := LJSONObject;
 end;
 
-// Remove Metadata
-class procedure TDXJson.RegisterConverters(AMarshaler:TJSONMarshal);
+class procedure TDXJson.RegisterConverters(AMarshaler: TJSONMarshal);
+
 begin
-(*
-  AMarshaler.RegisterConverter(DXTypes.Nullable.Nullable<T>, Function(Data: TObject; Field: string):TObject
-  begin
+  AMarshaler.RegisterConverter(TObject,
+    function(Data: TObject): TObject
+    begin
+      if Assigned(Data) then
+      begin
+      end;
+      (*
+        Person := TPerson(Data);
+        if Person.FAddress.FDescription <> nil then
+        Count := Person.FAddress.FDescription.Count
+        else
+        Count := 0;
+        SetLength(Result, Count + 4);
+        Result[0] := Person.FAddress.FStreet;
+        Result[1] := Person.FAddress.FCity;
+        Result[2] := Person.FAddress.FCode;
+        Result[3] := Person.FAddress.FCountry;
+        for I := 0 to Count - 1 do
+        Result[4+I] := Person.FAddress.FDescription[I];
+      *)
+    end);
+end;
 
-  end
-  );
-
-  *)
+class procedure TDXJson.RegisterReverters(AUnMarshaler: TJSONUnMarshal);
+begin
+  AUnMarshaler.RegisterReverter(TObject,
+    function(Data: TObject): TObject
+    begin
+      if Assigned(Data) then
+      begin
+      end;
+      (*
+        Person := TPerson(Data);
+        if Person.FAddress.FDescription <> nil then
+        Count := Person.FAddress.FDescription.Count
+        else
+        Count := 0;
+        SetLength(Result, Count + 4);
+        Result[0] := Person.FAddress.FStreet;
+        Result[1] := Person.FAddress.FCity;
+        Result[2] := Person.FAddress.FCode;
+        Result[3] := Person.FAddress.FCountry;
+        for I := 0 to Count - 1 do
+        Result[4+I] := Person.FAddress.FDescription[I];
+      *)
+    end);
 end;
 
 class function TDXJson.RemoveMetaData(AJsonObject: TJSONObject): TJSONObject;
@@ -111,26 +160,28 @@ end;
 
 class function TDXJson.ObjectToJson(AObject: TObject): string;
 var
-  Converter: TJSONMarshal;
+  LMarshaler: TJSONMarshal;
   LJSONObject: TJSONObject;
 begin
-  Converter := TJSONMarshal.Create(TJSONConverter.Create);
-  RegisterConverters(Converter);
-  LJSONObject := Converter.Marshal(AObject) as TJSONObject;
+  LMarshaler := TJSONMarshal.Create(TJSONConverter.Create);
+  RegisterConverters(LMarshaler);
+  LJSONObject := LMarshaler.Marshal(AObject) as TJSONObject;
   LJSONObject := RemoveMetaData(LJSONObject);
   result := LJSONObject.ToString;
 end;
 
 class function TDXJson.JsonToObject<T>(AJson: string): T;
 var
-  Reverter: TJSONUnMarshal;
+  LUnMarshaler: TJSONUnMarshal;
   LJSONObject: TJSONObject;
 begin
   LJSONObject := TJSONObject.ParseJSONValue(AJson) as TJSONObject;
   LJSONObject := InjectMetaData(LJSONObject, T.QualifiedClassName);
 
-  Reverter := TJSONUnMarshal.Create;
-  result := Reverter.Unmarshal(LJSONObject) as T;
+  LUnMarshaler := TJSONUnMarshal.Create;
+  RegisterReverters(LUnMarshaler);
+
+  result := LUnMarshaler.Unmarshal(LJSONObject) as T;
 end;
 
 end.
