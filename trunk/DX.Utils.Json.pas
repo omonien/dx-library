@@ -33,6 +33,7 @@ implementation
 uses
   Data.DBXPlatform, Data.DBXJsonCommon, Rtti,
   DX.Types.Nullable,
+  System.DateUtils,
   System.SysUtils;
 
 // Create JsonRelect meta data block. This is sort of a hack, as DBXJsonReflect relies on Metadata
@@ -48,43 +49,97 @@ var
   LValue: TJSONString;
   LPair: TJSONPair;
   LInnerObject: TJSONObject;
-  LFieldName: string;
-  LContext: TRTTIContext;
-  LType: TRttiType;
-  LField: TRttiField;
   LClassNameOfInnerObject: string;
-  LClassname: string;
+
   i: Integer;
   LObjectID: Integer;
+  LArray: TJSONArray;
+  LCount: Integer;
+  LJsonValue: TJSONValue;
+  LClassNameOfArrayItem: string;
+
+  // If ATypeName is a Generic tpye such as Nullable<T> or TObjectList<T> then return T
+  // otherwise return unchanged
+  function InnerGenericType(const ATypeName: string; AQualified: boolean = true): string;
+  var
+    LTypeName: string;
+  begin
+    LTypeName := ATypeName;
+    i := Pos('<', LTypeName);
+    if i > 0 then
+    begin
+      delete(LTypeName, 1, i);
+      // if there is a < then there is also a > (and we want the last one, in case this is a nested generic type...
+      i := LTypeName.LastIndexOf('>');
+      if i > 0 then
+        LTypeName := LTypeName.Remove(i, 1);
+    end;
+    // If AQualified, then return type as is, else return unqualified type name
+    if AQualified then
+      result := LTypeName
+    else
+    begin
+      i := LTypeName.LastIndexOf('.');
+      if i >= 0 then
+      begin
+        result := LTypeName.Remove(0, i + 1);
+      end;
+    end;
+  end;
+
+  function TypeOfInnerObject: TRttiType;
+  var
+    LFieldName: string;
+    LClassname: string;
+    LContext: TRTTIContext;
+    LType: TRttiType;
+    LField: TRttiField;
+  begin
+    LFieldName := LPair.JsonString.Value;
+    LContext := TRTTIContext.Create;
+    LClassname := AClassName;
+
+    LClassname := InnerGenericType(LClassname);
+
+    LType := LContext.FindType(LClassname);
+    LField := LType.GetField(LFieldName);
+    result := LField.FieldType;
+  end;
+
 begin
-  // Check inner objects recursively
+  // Check inner arrays and objects recursively
   for LPair in AJsonObject do
   begin
-    if LPair.JsonValue is TJSONObject then
+    if LPair.JsonValue is TJSONArray then
+
     begin
-      LFieldName := LPair.JsonString.Value;
-      LContext := TRTTIContext.Create;
-      LClassname := AClassName;
-      // Is this a Generic, specifically Nullable<something> ?
-      i := Pos('<', LClassname);
-      if i > 0 then
+      // If an Array exists in JSON, then its Delphi counterpart needs to be
+      // a generic container type such as TObjectlist<T>
+      // Type T is then the type of the array's items
+      LClassNameOfArrayItem := InnerGenericType(TypeOfInnerObject.QualifiedName, false);
+
+      LArray := TJSONArray(LPair.JsonValue);
+      for i := 0 to LArray.Size - 1 do
       begin
-        delete(LClassname, 1, i);
-        // if there is a < then there is also a >
-        i := Pos('>', LClassname);
-        delete(LClassname, i, maxint);
+        LJsonValue := LArray.Get(i);
+        // Todo: This could be an Object OR an Array
+        if LJsonValue is TJSONObject then
+        begin
+          LPair.JsonValue := InjectMetaData(TJSONObject(LJsonValue), LClassNameOfArrayItem);
+        end;
       end;
 
-      LType := LContext.FindType(LClassname);
-      LField := LType.GetField(LFieldName);
-      LClassNameOfInnerObject := LField.FieldType.QualifiedName;
+    end
+    else if LPair.JsonValue is TJSONObject then
+    begin
+      LClassNameOfInnerObject := TypeOfInnerObject.QualifiedName;
       LInnerObject := LPair.JsonValue as TJSONObject;
       LPair.JsonValue := InjectMetaData(LInnerObject, LClassNameOfInnerObject);
     end;
   end;
 
   // Outer object
-  LObjectID := GetNextID;   //We really don't care about object references in this scenario
+  LObjectID := GetNextID; // We really don't care about object references in this scenario
   LJSONObject := TJSONObject.ParseJSONValue(Format('{"type":"","id":%d,"fields":{}}', [LObjectID])) as TJSONObject;
   LValue := TJSONString.Create(AClassName);
   LJSONObject.Get('type').JsonValue := LValue;
@@ -120,8 +175,10 @@ begin
 end;
 
 class procedure TDXJson.RegisterReverters(AUnMarshaler: TJSONUnMarshal);
+var
+  LDate: TDateTime;
 begin
-  AUnMarshaler.RegisterReverter(TObject,
+  AUnMarshaler.RegisterReverter(nil,
     function(Data: TObject): TObject
     begin
       if Assigned(Data) then
@@ -164,7 +221,7 @@ var
   LJSONObject: TJSONObject;
 begin
   LMarshaler := TJSONMarshal.Create(TJSONConverter.Create);
-  RegisterConverters(LMarshaler);
+  // RegisterConverters(LMarshaler);
   LJSONObject := LMarshaler.Marshal(AObject) as TJSONObject;
   LJSONObject := RemoveMetaData(LJSONObject);
   result := LJSONObject.ToString;
@@ -179,7 +236,7 @@ begin
   LJSONObject := InjectMetaData(LJSONObject, T.QualifiedClassName);
 
   LUnMarshaler := TJSONUnMarshal.Create;
-  RegisterReverters(LUnMarshaler);
+  // RegisterReverters(LUnMarshaler);
 
   result := LUnMarshaler.Unmarshal(LJSONObject) as T;
 end;
