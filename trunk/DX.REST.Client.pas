@@ -94,6 +94,8 @@ type
     /// of class &lt;T&gt;
     /// </summary>
     function GetEntityList<T: class>(const AQuery: string): TObjectList<T>;
+    function GetEntityArray<T: class>(const AQuery: string): TArray<T>;
+
 
     function InsertEntity<T: class>(const AQuery: string; AEntity: T): TJSONObject;
 
@@ -117,10 +119,12 @@ type
     property Username: string read FUserName write SetUserName;
   end;
 
+  
 implementation
 
 uses IdURI, IdGlobal, DX.Utils.Json;
 
+    
 constructor TRESTClient.Create(const ABaseApiURL: string);
 begin
   FHttpClient := TIdHttp.Create(nil);
@@ -170,6 +174,22 @@ begin
   LResponse := DoGetRequest(AQuery);
 
   result := T.Create;
+end;
+
+function TRESTClient.GetEntityArray<T>(const AQuery: string): TArray<T>;
+var
+  LList: TObjectList<T>;
+  xEntity: T;
+  i: Integer;
+begin
+  LList := GetEntityList<T>(AQuery);
+  SetLength(result, LList.Count);
+  i := 0;
+  for xEntity in LList do
+  begin
+    result[i] := xEntity;
+    inc(i);
+  end;
 end;
 
 function TRESTClient.GetEntityList<T>(const AQuery: string): TObjectList<T>;
@@ -311,6 +331,7 @@ begin
     end;
 
   finally
+    FHttpClient.Disconnect;
     FreeAndNil(LRequestBody);
   end;
 end;

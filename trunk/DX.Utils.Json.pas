@@ -36,13 +36,15 @@ uses
   System.DateUtils,
   System.SysUtils;
 
-// Create JsonRelect meta data block. This is sort of a hack, as DBXJsonReflect relies on Metadata
-// We are processing "plain" Json though - without any meta data
+
 class function TDXJson.GetNextID: Integer;
 begin
   result := AtomicIncrement(FID);
 end;
 
+
+// Create JsonReflect meta data block. This is sort of a hack, as DBXJsonReflect relies on Metadata
+// We are processing "plain" Json though - without any meta data
 class function TDXJson.InjectMetaData(AJsonObject: TJSONObject; AClassName: string): TJSONObject;
 var
   LJSONObject: TJSONObject;
@@ -57,10 +59,11 @@ var
   LCount: Integer;
   LJsonValue: TJSONValue;
   LClassNameOfArrayItem: string;
+  LNewArray: TJSONArray;
 
   // If ATypeName is a Generic tpye such as Nullable<T> or TObjectList<T> then return T
   // otherwise return unchanged
-  function InnerGenericType(const ATypeName: string; AQualified: boolean = true): string;
+  function InnerGenericType(const ATypeName: string): string;
   var
     LTypeName: string;
   begin
@@ -75,7 +78,7 @@ var
         LTypeName := LTypeName.Remove(i, 1);
     end;
     // If AQualified, then return type as is, else return unqualified type name
-    if AQualified then
+    if true then
       result := LTypeName
     else
     begin
@@ -116,18 +119,22 @@ begin
       // If an Array exists in JSON, then its Delphi counterpart needs to be
       // a generic container type such as TObjectlist<T>
       // Type T is then the type of the array's items
-      LClassNameOfArrayItem := InnerGenericType(TypeOfInnerObject.QualifiedName, false);
+      LClassNameOfArrayItem := InnerGenericType(TypeOfInnerObject.QualifiedName);
 
       LArray := TJSONArray(LPair.JsonValue);
+      //The arry can not easily be changed in place, so we are coping to a new one
+      LNewArray := TJSONArray.Create;
       for i := 0 to LArray.Size - 1 do
       begin
         LJsonValue := LArray.Get(i);
         // Todo: This could be an Object OR an Array
         if LJsonValue is TJSONObject then
         begin
-          LPair.JsonValue := InjectMetaData(TJSONObject(LJsonValue), LClassNameOfArrayItem);
+          LJsonValue := InjectMetaData(TJSONObject(LJsonValue), LClassNameOfArrayItem);
+          LNewArray.AddElement(LJsonValue);
         end;
       end;
+      LPair.JsonValue := TJsonValue(LNewArray);
 
     end
     else if LPair.JsonValue is TJSONObject then
