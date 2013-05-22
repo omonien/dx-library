@@ -1,30 +1,28 @@
 {$REGION 'Documentation'}
-///	<summary>
-///	  D.Utils.Logger provides an easy to use logging mechanism
-///	</summary>
-///	<remarks>
-///	  <para>
-///	    DX.Utils.Json is part of DX.Library
-///	  </para>
-///	  <para>
-///	    See: <see href="http://code.google.com/p/dx-library/" />
-///	  </para>
-///	</remarks>
-///	<example>
-///	  <para>
-///	    uses
-///	  </para>
-///	  <para>
-///	     DX.Utils.Logger;
-///	  </para>
-///	  <para>
-///	    Log('Some log message')
-///	  </para>
-///	</example>
+/// <summary>
+/// D.Utils.Logger provides an easy to use logging mechanism
+/// </summary>
+/// <remarks>
+/// <para>
+/// DX.Utils.Json is part of DX.Library
+/// </para>
+/// <para>
+/// See: <see href="http://code.google.com/p/dx-library/" />
+/// </para>
+/// </remarks>
+/// <example>
+/// <para>
+/// uses
+/// </para>
+/// <para>
+/// DX.Utils.Logger;
+/// </para>
+/// <para>
+/// Log('Some log message')
+/// </para>
+/// </example>
 {$ENDREGION}
 unit DX.Utils.Logger;
-
-
 
 interface
 
@@ -33,11 +31,11 @@ uses
   Classes;
 
 type
-  {$REGION 'Documentation'}
-  ///	<summary>
-  ///	  TFXLogger provides a thread-safe logging mechanism.
-  ///	</summary>
-  {$ENDREGION}
+{$REGION 'Documentation'}
+  /// <summary>
+  /// TFXLogger provides a thread-safe logging mechanism.
+  /// </summary>
+{$ENDREGION}
   TDXLogger = class(TObject)
   private
     class var FInstance: TDXLogger;
@@ -48,9 +46,9 @@ type
     FExternalStrings: TStrings;
     FLogBuffer: TStrings;
     FThread: TThread;
-    constructor create;
-    destructor destroy;
-
+  protected
+    constructor Create;
+    destructor Destroy; override;
     function ExternalStringsAssigned: Boolean;
   public
     // External Strings can be used to log to a TMemo. Updates are done via Synchronize/Main Thread
@@ -63,20 +61,35 @@ procedure Log(AMessage: string);
 
 implementation
 
+{$IFDEF WINDOWS}
+
 uses
   Windows,
   Messages;
+{$ELSE}
+{$IFDEF IOS}
+
+uses
+  DX.Apple.Utils;
+{$ELSE}
+{$IFDEF MACOS}
+
+uses DX.Apple.Utils;
+{$ENDIF}
+{$ENDIF}
+{$ENDIF}
 
 type
   TLogThread = class(TThread)
   private
+    procedure UpdateConsole;
     procedure UpdateLogFile;
     procedure UpdateExtrnalStrings;
   public
     FTempBuffer: TStrings; // Used to decouple the main buffer
     FExternalBuffer: TStrings; // Used as a separate buffer for writing to the external strings
-    constructor create;
-    destructor destroy; Override;
+    constructor Create;
+    destructor Destroy; Override;
     procedure Execute; Override;
     procedure UpdateExternalStrings;
   end;
@@ -87,16 +100,16 @@ begin
 end;
 
 { TDXLogger }
-constructor TDXLogger.create;
+constructor TDXLogger.Create;
 begin
   inherited;
-  FLogBuffer := TStringList.create;
-  FThread := TLogThread.create;
+  FLogBuffer := TStringList.Create;
+  FThread := TLogThread.Create;
   FExternalStrings := nil;
   FThread.Start;
 end;
 
-destructor TDXLogger.destroy;
+destructor TDXLogger.Destroy;
 begin
   FreeAndNil(FThread);
   FreeAndNil(FLogBuffer);
@@ -116,7 +129,7 @@ end;
 class function TDXLogger.Instance: TDXLogger;
 begin
   if FTerminating then
-    raise EAbort.create('Terminating');
+    raise EAbort.Create('Terminating');
   result := FInstance;
 end;
 
@@ -149,14 +162,14 @@ end;
 
 { TLogThread }
 
-constructor TLogThread.create;
+constructor TLogThread.Create;
 begin
-  inherited create(true);
-  FTempBuffer := TStringList.create;
-  FExternalBuffer := TStringList.create;
+  inherited Create(true);
+  FTempBuffer := TStringList.Create;
+  FExternalBuffer := TStringList.Create;
 end;
 
-destructor TLogThread.destroy;
+destructor TLogThread.Destroy;
 begin
   FreeAndNil(FExternalBuffer);
   FreeAndNil(FTempBuffer);
@@ -182,6 +195,8 @@ begin
     if FTempBuffer.Count > 0 then
     begin
       // From here FTempBuffer will only be used in this LogThread
+      // Log to console (iOS: NSLog, Windows: OutputDebugString)
+      UpdateConsole;
       // Write Log file
       UpdateLogFile;
       // Write to External Strings (using Main Thread)
@@ -234,6 +249,19 @@ begin
   FTempBuffer.Clear;
 end;
 
+procedure TLogThread.UpdateConsole;
+var
+  LMessage: string;
+begin
+  for LMessage in FTempBuffer do
+  begin
+{$IFDEF IOS}
+    NSLog2(LMessage);
+{$ENDIF}
+  end;
+
+end;
+
 procedure TLogThread.UpdateExternalStrings;
 begin
   if (TDXLogger.Instance <> nil) and Assigned(TDXLogger.FExternalStrings) and Assigned(FExternalBuffer) and
@@ -256,7 +284,7 @@ end;
 initialization
 
 TDXLogger.FTerminating := false;
-TDXLogger.FInstance := TDXLogger.create;
+TDXLogger.FInstance := TDXLogger.Create;
 
 finalization
 
