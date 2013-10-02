@@ -4,7 +4,7 @@
 /// </summary>
 /// <remarks>
 /// <para>
-/// DX.Utils.Json is part of DX.Library
+/// DX.Utils.Logger is part of DX.Library
 /// </para>
 /// <para>
 /// See: <see href="http://code.google.com/p/dx-library/" />
@@ -61,22 +61,20 @@ procedure Log(AMessage: string);
 
 implementation
 
-{$IFDEF WINDOWS}
-
+{$IFDEF MSWINDOWS}
 uses
   Windows,
   Messages;
-{$ELSE}
-{$IFDEF IOS}
+{$ENDIF}
 
+{$IF defined(IOS) or Defined(MACOS)}
 uses
   DX.Apple.Utils;
-{$ELSE}
-{$IFDEF MACOS}
+{$ENDIF}
 
-uses DX.Apple.Utils;
-{$ENDIF}
-{$ENDIF}
+{$IFDEF Android}
+uses
+  AndroidAPI.Log;
 {$ENDIF}
 
 type
@@ -197,9 +195,9 @@ begin
       // From here FTempBuffer will only be used in this LogThread
       // Log to console (iOS: NSLog, Windows: OutputDebugString)
       UpdateConsole;
-      // Write Log file
+      // Write Log file (Windows, MacOS: Appname.log)
       UpdateLogFile;
-      // Write to External Strings (using Main Thread)
+      // Write to External Strings (if, assigned, e.g. Memo, synchronized to Main Thread)
       UpdateExternalStrings;
       // Done with TempBuffer
       FTempBuffer.Clear;
@@ -227,6 +225,7 @@ var
   s: String;
   LFileName: string;
 begin
+{$IF defined(MSWindows) or defined(MacOS)}
   try
     LFileName := ParamStr(0) + '.log';
     AssignFile(F, LFileName);
@@ -246,7 +245,7 @@ begin
   except
     // Nothing - if logging doesn't work, then there nothing we can do about.
   end;
-  FTempBuffer.Clear;
+{$ENDIF}
 end;
 
 procedure TLogThread.UpdateConsole;
@@ -257,6 +256,12 @@ begin
   begin
 {$IFDEF IOS}
     NSLog2(LMessage);
+{$ENDIF}
+{$IFDEF MSWINDOWS}
+    OutputDebugString(pchar(LMessage));
+{$ENDIF}
+{$IFDEF ANDROID}
+    LOGI(MarshaledAString(LMessage));
 {$ENDIF}
   end;
 
