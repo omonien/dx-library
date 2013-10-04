@@ -51,7 +51,9 @@ type
     destructor Destroy; override;
     function ExternalStringsAssigned: Boolean;
   public
-    // External Strings can be used to log to a TMemo. Updates are done via Synchronize/Main Thread
+    ///	<summary>
+    ///	  External Strings can be used to log to a TMemo. Updates are done via Synchronize/Main Thread
+    ///	</summary>
     class procedure SetExternalStrings(AStrings: TStrings);
     class procedure Log(AMessage: string);
     class function Instance: TDXLogger;
@@ -251,6 +253,7 @@ end;
 procedure TLogThread.UpdateConsole;
 var
   LMessage: string;
+  LMarshaller : TMarshaller;
 begin
   for LMessage in FTempBuffer do
   begin
@@ -261,7 +264,7 @@ begin
     OutputDebugString(pchar(LMessage));
 {$ENDIF}
 {$IFDEF ANDROID}
-    LOGI(MarshaledAString(LMessage));
+    LOGI(LMarshaller.AsAnsi(LMessage).ToPointer);
 {$ENDIF}
   end;
 
