@@ -89,8 +89,9 @@ implementation
 uses
   System.SysUtils,
   Apple.Utils,
-  // Apple.Utils.pas ships with XE4 and can usually be found here:
+  // Apple.Utils.pas ships with XE4 & XE5 and can usually be found here:
   // C:\Users\Public\Documents\RADStudio\11.0\Samples\Delphi\RTL\CrossPlatform Utils
+  // C:\Users\Public\Documents\RAD Studio\12.0\Samples\Delphi\RTL\CrossPlatform Utils
 
 {$IFDEF IOS}
   Macapi.ObjectiveC,
@@ -101,6 +102,7 @@ uses
 {$ELSE}
 {$IFDEF MACOS}
   Macapi.ObjectiveC,
+  Macapi.ObjCRuntime,
   Macapi.Foundation
 {$ENDIF MACOS}
 {$ENDIF IOS}
@@ -141,8 +143,16 @@ type
 
   TUIDeviceDX = class(TOCGenericImport<UIDeviceClass, UIDevice>)
   end;
+{$ELSE}
+{$IFDEF MACOS}
+type PNSString = Pointer;
 
-{$ENDIF}
+const
+  libFoundation = '/System/Library/Frameworks/Foundation.framework/Foundation';
+
+procedure NSLog(format: PNSString); cdecl; varargs; external libFoundation name _PU + 'NSLog';
+{$ENDIF MACOS}
+{$ENDIF IOS}
 
 procedure NSLog2(const AMessage: string; AAddTimeStamp: boolean = false);
 var
@@ -155,7 +165,7 @@ begin
   else
     LTimeStamp := '';
   LMessage := NSSTR(LTimeStamp + AMessage);
-  iOSApi.Foundation.NSLog(PtrForObject(LMessage));
+  NSLog(PtrForObject(LMessage));
 end;
 
 {$IFDEF IOS}

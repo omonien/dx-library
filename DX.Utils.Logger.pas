@@ -84,14 +84,14 @@ type
   private
     procedure UpdateConsole;
     procedure UpdateLogFile;
-    procedure UpdateExtrnalStrings;
+    procedure UpdateExternalStrings;
   public
     FTempBuffer: TStrings; // Used to decouple the main buffer
     FExternalBuffer: TStrings; // Used as a separate buffer for writing to the external strings
     constructor Create;
     destructor Destroy; Override;
     procedure Execute; Override;
-    procedure UpdateExternalStrings;
+    procedure SyncronizeExternalStrings;
   end;
 
 procedure Log(AMessage: string);
@@ -157,7 +157,6 @@ begin
   finally
     TMonitor.Exit(Instance);
   end;
-
 end;
 
 { TLogThread }
@@ -200,18 +199,18 @@ begin
       // Write Log file (Windows, MacOS: Appname.log)
       UpdateLogFile;
       // Write to External Strings (if, assigned, e.g. Memo, synchronized to Main Thread)
-      UpdateExternalStrings;
+      SyncronizeExternalStrings;
       // Done with TempBuffer
       FTempBuffer.Clear;
     end;
   end;
 end;
 
-procedure TLogThread.UpdateExtrnalStrings;
+procedure TLogThread.SyncronizeExternalStrings;
 begin
   if TDXLogger.Instance.ExternalStringsAssigned then
   begin
-    TMonitor.Enter(FExternalBuffer); // FEXternalBuffer is cleared in the contex of the main thread (via Synchronize)
+    TMonitor.Enter(FExternalBuffer); // FExternalBuffer is cleared in the contex of the main thread (via Synchronize)
     try
       FExternalBuffer.AddStrings(FTempBuffer);
     finally
@@ -222,10 +221,12 @@ begin
 end;
 
 procedure TLogThread.UpdateLogFile;
+{$IF defined(MSWindows) or defined(MacOS)}
 var
   F: TextFile;
   s: String;
   LFileName: string;
+{$ENDIF}
 begin
 {$IF defined(MSWindows) or defined(MacOS)}
   try
@@ -253,11 +254,13 @@ end;
 procedure TLogThread.UpdateConsole;
 var
   LMessage: string;
+{$IFDEF MSWINDOWS}
   LMarshaller : TMarshaller;
+{$ENDIF}
 begin
   for LMessage in FTempBuffer do
   begin
-{$IFDEF IOS}
+{$IF defined(IOS) or Defined(MACOS)}
     NSLog2(LMessage);
 {$ENDIF}
 {$IFDEF MSWINDOWS}
