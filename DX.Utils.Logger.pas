@@ -254,7 +254,7 @@ end;
 procedure TLogThread.UpdateConsole;
 var
   LMessage: string;
-{$IFDEF MSWINDOWS}
+{$IFDEF Android}
   LMarshaller : TMarshaller;
 {$ENDIF}
 begin
