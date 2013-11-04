@@ -221,14 +221,14 @@ begin
 end;
 
 procedure TLogThread.UpdateLogFile;
-{$IF defined(MSWindows) or defined(MacOS)}
+{$IF (defined(MSWindows) or defined(MacOS)) and not (defined(IOS)))}
 var
   F: TextFile;
   s: String;
   LFileName: string;
 {$ENDIF}
 begin
-{$IF defined(MSWindows) or defined(MacOS)}
+{$IF (defined(MSWindows) or defined(MacOS)) and not (defined(IOS))) }
   try
     LFileName := ParamStr(0) + '.log';
     AssignFile(F, LFileName);
