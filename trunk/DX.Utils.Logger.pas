@@ -48,7 +48,7 @@ type
     FThread: TThread;
   protected
     constructor Create;
-    destructor Destroy; override;
+    destructor Destroy; reintroduce;
     function ExternalStringsAssigned: Boolean;
   public
     ///	<summary>
