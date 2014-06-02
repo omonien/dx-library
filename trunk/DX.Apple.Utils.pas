@@ -69,6 +69,11 @@ interface
 /// </remarks>
 procedure NSLog2(const AMessage: string; AAddTimeStamp: boolean = false);
 
+/// <summary>
+/// Raises an Exception if ANSError is <> nil
+/// </summary>
+procedure RaiseOnNSError(ANSError: Pointer);
+
 {$IFDEF IOS}
 /// <summary>
 /// Retrieves the vendor specific device ID - DO NOT USE UIDevice.uniqueIdentifier - this would lead to AppStore rejection since May 1st, 2013!
@@ -80,7 +85,13 @@ function VendorIdentifier: string;
 /// This is for custom URL schemes like fb://profile/omonien, which would open
 /// the Facebook app - if installed on the device - and navigate to the given profile
 /// </summary>
-function CanOpenURL(AURL: string): boolean;
+function CanOpenURL(const AURL: string): boolean;
+
+/// <summary>
+/// Marks the given file not to be backed up by iOS.
+/// See  https://developer.apple.com/library/ios/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html#//apple_ref/doc/uid/TP40010672-CH2-SW4
+/// </summary>
+procedure ExcludeFromBackup(const APath: string);
 
 {$ENDIF IOS}
 
@@ -93,25 +104,30 @@ uses
   // C:\Users\Public\Documents\RADStudio\11.0\Samples\Delphi\RTL\CrossPlatform Utils
   // C:\Users\Public\Documents\RAD Studio\12.0\Samples\Delphi\RTL\CrossPlatform Utils
 
-{$IFDEF IOS}
+{$IF Defined(IOS) or Defined(MACOS)}
   Macapi.ObjectiveC,
+  Macapi.Helpers,
+{$ENDIF}
+{$IF Defined(IOS)}
   iOSApi.Foundation,
   iOSApi.UIKit,
   iOSApi.QuartzCore,
   iOSApi.CocoaTypes
-{$ELSE}
-{$IFDEF MACOS}
-  Macapi.ObjectiveC,
+{$ELSEIF Defined(MACOS)}
   Macapi.ObjCRuntime,
   Macapi.Foundation
-{$ENDIF MACOS}
-{$ENDIF IOS}
+{$ENDIF}
     ;
 
+type
+  /// <summary>
+  /// Exception class which is use to raise Exceptions originating from NSErrors
+  /// </summary>
+  ENSError = class(Exception);
 {$IFDEF IOS}
 
-// Hack to import forgotten classes/functions and properties
-// Be careful - classes with same name may already exist in iOSApi!!
+  // Hack to import forgotten classes/functions and properties
+  // Be careful - classes with same name may already exist in iOSApi!!
 type
 
   // **** NSUUID
@@ -145,14 +161,19 @@ type
   end;
 {$ELSE}
 {$IFDEF MACOS}
-type PNSString = Pointer;
+
+procedure NSLog(format: PNSString); cdecl; varargs; external libFoundation name _PU + 'NSLog';
+
+{$ENDIF MACOS}
+{$ENDIF IOS}
+
+type
+  // For better readability / portability
+  PNSString = Pointer;
+  id = Pointer;
 
 const
   libFoundation = '/System/Library/Frameworks/Foundation.framework/Foundation';
-
-procedure NSLog(format: PNSString); cdecl; varargs; external libFoundation name _PU + 'NSLog';
-{$ENDIF MACOS}
-{$ENDIF IOS}
 
 procedure NSLog2(const AMessage: string; AAddTimeStamp: boolean = false);
 var
@@ -164,16 +185,47 @@ begin
     LTimeStamp := '(' + FormatDateTime('hh:nn:ss,zzz', now) + ') - '
   else
     LTimeStamp := '';
-  LMessage := NSSTR(LTimeStamp + AMessage);
+  LMessage := StrToNSStr(LTimeStamp + AMessage);
   NSLog(PtrForObject(LMessage));
+end;
+
+procedure RaiseOnNSError(ANSError: Pointer);
+var
+  LError: NSError;
+  LMsg: string;
+begin
+  if ANSError <> nil then
+  begin
+    LError := TNSError.Wrap(ANSError);
+    LMsg := NSStrToStr(LError.LocalizedDescription);
+    raise ENSError.Create(LMsg);
+  end;
 end;
 
 {$IFDEF IOS}
 
+procedure ExcludeFromBackup(const APath: string);
+var
+  FileManager: NSFileManager;
+  Url: NSURL;
+  LNSError: Pointer;
+begin
+  FileManager := TNSFileManager.Wrap(TNSFileManager.OCClass.defaultManager);
+  if FileExists(APath) then
+  begin
+    Url := TNSURL.Wrap(TNSURL.OCClass.fileURLWithPath(StrToNSStr(APath)));
+
+    // https://developer.apple.com/library/ios/qa/qa1719/_index.html
+    if not Url.setResourceValue(id(TNSNumber.OCClass.numberWithBool(True)),
+      CocoaNSStringConst(libFoundation, 'NSURLIsExcludedFromBackupKey'), @LNSError) then
+      RaiseOnNSError(LNSError);
+  end;
+end;
+
 // Don't expose this - its just a partial import
 function currentDevice: DX.Apple.Utils.UIDevice;
 begin
-  result := TUIDeviceDX.Wrap(TUIDeviceDX.OCClass.currentDevice);
+  Result := TUIDeviceDX.Wrap(TUIDeviceDX.OCClass.currentDevice);
 end;
 
 function VendorIdentifier: string;
@@ -181,12 +233,12 @@ var
   LDevice: DX.Apple.Utils.UIDevice;
 begin
   LDevice := currentDevice;
-  result := NSStringToString(LDevice.identifierForVendor.UUIDString);
+  Result := NSStringToString(LDevice.identifierForVendor.UUIDString);
 end;
 
-function CanOpenURL(AURL: string): boolean;
+function CanOpenURL(const AURL: string): boolean;
 begin
-  result := SharedApplication.CanOpenURL(StringToNSUrl(AURL));
+  Result := SharedApplication.CanOpenURL(StringToNSUrl(AURL));
 end;
 {$ENDIF}
 
