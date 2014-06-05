@@ -1,6 +1,6 @@
 {$REGION 'Documentation'}
 /// <summary>
-/// D.Utils.Logger provides an easy to use logging mechanism
+/// DX.Utils.Logger provides an easy to use logging mechanism
 /// </summary>
 /// <remarks>
 /// <para>
