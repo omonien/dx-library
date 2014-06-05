@@ -49,7 +49,7 @@ type
     procedure SetMessage(const Value: string);
   protected
     constructor Create;
-    destructor Destroy; override;
+    destructor Destroy; reintroduce;
     property ShowCount: Integer read FShowCount write FShowCount;
   public
     class procedure Start(AMessage: string);
@@ -69,7 +69,6 @@ var
 constructor TWait.Create;
 var
   LStream: TResourceStream;
-
 begin
   inherited;
   FPopup := TCustomPopupForm.Create(nil, nil, nil);
@@ -80,10 +79,21 @@ begin
     // We want the Wait Popup to be centered over the screen, which FMX calls a PlacementTarget
     // Unfortunately the Screen itself cannot be set as such a target, but we can specify a target's
     // rectangle alternatively
-    PlacementRectangle.Left := 0;
-    PlacementRectangle.Top := 0;
-    PlacementRectangle.Right := Screen.Size.Width;
-    PlacementRectangle.Bottom := Screen.Size.Height;
+
+    if Assigned(Application.MainForm) then
+    begin
+      PlacementRectangle.Left := Application.MainForm.Left;
+      PlacementRectangle.Top := Application.MainForm.Top;
+      PlacementRectangle.Right := PlacementRectangle.Left + Application.MainForm.Width;
+      PlacementRectangle.Bottom := PlacementRectangle.Top + Application.MainForm.Height;
+    end
+    else
+    begin
+      PlacementRectangle.Left := 0;
+      PlacementRectangle.Top := 0;
+      PlacementRectangle.Right := Screen.Size.Width;
+      PlacementRectangle.Bottom := Screen.Size.Height;
+    end;
     // We want it centered
     Placement := TPlacement.Center;
     Transparency := true;
@@ -143,8 +153,8 @@ begin
     PropertyName := 'Bitmap';
     AnimationCount := 8;
     Duration := 1.0;
-    Loop := True;
-    Enabled := True;
+    Loop := true;
+    Enabled := true;
   end;
 
   // if FileExists(TPath.Combine(TPath.GetDocumentsPath, 'wheel.png')) then
