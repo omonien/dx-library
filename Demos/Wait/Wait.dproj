@@ -196,6 +196,7 @@
             <Form>Form2</Form>
             <FormType>fmx</FormType>
         </DCCReference>
+        <DCCReference Include="..\..\DX.CrossPlatform.pas"/>
         <RcItem Include="..\..\wheel.png">
             <ResourceType>RCDATA</ResourceType>
             <ResourceId>PngImage_1</ResourceId>

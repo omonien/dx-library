@@ -9,7 +9,8 @@ uses
   FMX.Forms,
   FormMainU in 'FormMainU.pas' {FormMain},
   DX.FMX.Wait in '..\..\DX.FMX.Wait.pas',
-  Form2U in 'Form2U.pas' {Form2};
+  Form2U in 'Form2U.pas' {Form2},
+  DX.CrossPlatform in '..\..\DX.CrossPlatform.pas';
 
 {$R *.res}
 
