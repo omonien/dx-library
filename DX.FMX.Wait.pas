@@ -75,7 +75,6 @@ begin
   FPopup := TCustomPopupForm.Create(nil, nil, nil);
   with FPopup do
   begin
-    // Name := 'TWaitPopupContainer';
     // Little inconsistency in FMX: A TCustomPopupForm's size is NOT defined by width and height!
     Size := TSizeF.Create(160, 96);
     // We want the Wait Popup to be centered over the screen, which FMX calls a PlacementTarget
@@ -157,8 +156,8 @@ end;
 destructor TWait.Destroy;
 begin
   FreeAndNil(FLabelWait);
-  FreeAndNil(FWheelImage);
   FreeAndNil(FWheelAnimation);
+  FreeAndNil(FWheelImage);
   FreeAndNil(FWheelBitmap);
   FreeAndNil(FPopup);
   inherited;
