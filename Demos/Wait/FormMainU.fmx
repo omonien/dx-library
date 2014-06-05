@@ -1,0 +1,81 @@
+object FormMain: TFormMain
+  Left = 0
+  Top = 0
+  Caption = 'Form3'
+  ClientHeight = 548
+  ClientWidth = 320
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  DesignerMobile = True
+  DesignerWidth = 320
+  DesignerHeight = 568
+  DesignerDeviceName = 'iPhone5'
+  DesignerOrientation = 0
+  DesignerOSVersion = '7'
+  object Button1: TButton
+    Align = Bottom
+    Height = 44.000000000000000000
+    Position.Y = 504.000000000000000000
+    TabOrder = 1
+    Text = 'Do something ...'
+    Width = 320.000000000000000000
+    OnClick = Button1Click
+  end
+  object Label1: TLabel
+    Height = 21.000000000000000000
+    Position.X = 32.000000000000000000
+    Position.Y = 160.000000000000000000
+    Text = 'Label1'
+    Width = 82.000000000000000000
+  end
+  object Label3: TLabel
+    Height = 21.000000000000000000
+    Position.X = 216.000000000000000000
+    Position.Y = 48.000000000000000000
+    Text = 'Label1'
+    Width = 82.000000000000000000
+  end
+  object Label4: TLabel
+    Height = 21.000000000000000000
+    Position.X = 112.000000000000000000
+    Position.Y = 160.000000000000000000
+    Text = 'Label1'
+    Width = 82.000000000000000000
+  end
+  object Label5: TLabel
+    Height = 21.000000000000000000
+    Position.X = 128.000000000000000000
+    Position.Y = 48.000000000000000000
+    Text = 'Label1'
+    Width = 82.000000000000000000
+  end
+  object Label6: TLabel
+    Height = 21.000000000000000000
+    Position.X = 32.000000000000000000
+    Position.Y = 48.000000000000000000
+    Text = 'Label1'
+    Width = 82.000000000000000000
+  end
+  object Label7: TLabel
+    Height = 21.000000000000000000
+    Position.X = 216.000000000000000000
+    Position.Y = 160.000000000000000000
+    Text = 'Label1'
+    Width = 82.000000000000000000
+  end
+  object Rectangle1: TRectangle
+    Fill.Color = claChocolate
+    Height = 50.000000000000000000
+    Position.X = 136.000000000000000000
+    Position.Y = 248.000000000000000000
+    Width = 50.000000000000000000
+  end
+  object Timer1: TTimer
+    Enabled = False
+    Interval = 2000
+    OnTimer = Timer1Timer
+    Left = 232
+    Top = 256
+  end
+end
