@@ -1,0 +1,36 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{59956C63-307D-4CE7-945C-E394E056C6CB}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="Wait.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="Wait">
+        <MSBuild Projects="Wait.dproj"/>
+    </Target>
+    <Target Name="Wait:Clean">
+        <MSBuild Projects="Wait.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="Wait:Make">
+        <MSBuild Projects="Wait.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="Wait"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="Wait:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="Wait:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>
