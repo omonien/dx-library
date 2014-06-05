@@ -18,6 +18,7 @@ type
     Label7: TLabel;
     Rectangle1: TRectangle;
     Timer1: TTimer;
+    CheckBox1: TCheckBox;
     procedure Button1Click(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
   private
@@ -46,7 +47,7 @@ type
 
 procedure TFormMain.Button1Click(Sender: TObject);
 begin
-  TWait.Start('Loading data...');
+  TWait.Start('Loading data...', CheckBox1.IsChecked);
   Timer1.Enabled := true;
 end;
 

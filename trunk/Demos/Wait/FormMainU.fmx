@@ -78,4 +78,16 @@ object FormMain: TFormMain
     Left = 232
     Top = 256
   end
+  object CheckBox1: TCheckBox
+    Align = Bottom
+    Height = 19.000000000000000000
+    Margins.Left = 16.000000000000000000
+    Margins.Right = 16.000000000000000000
+    Margins.Bottom = 8.000000000000000000
+    Position.X = 16.000000000000000000
+    Position.Y = 477.000000000000000000
+    TabOrder = 5
+    Text = 'Dim background'
+    Width = 288.000000000000000000
+  end
 end

@@ -40,27 +40,31 @@ type
   private
     FLabelWait: TLabel;
     FPopup: TCustomPopupForm;
+    FRectDim: TRectangle;
     FRectWait: TRectangle;
     FShowCount: Integer;
     FWheelAnimation: TBitmapListAnimation;
     FWheelBitmap: TBitmap;
     FWheelImage: TImage;
+    FDim: Boolean;
     function GetMessage: string;
     procedure SetMessage(const Value: string);
+    procedure SetDim(const Value: Boolean);
   protected
     constructor Create;
     destructor Destroy; reintroduce;
     property ShowCount: Integer read FShowCount write FShowCount;
   public
-    class procedure Start(AMessage: string);
+    class procedure Start(AMessage: string; ADimBackground: Boolean = False);
     class procedure Stop;
     property Message: string read GetMessage write SetMessage;
+    property Dim: Boolean read FDim write SetDim;
   end;
 
 implementation
 
 uses
-  System.IOUtils;
+  System.IOUtils, System.UIConsts, DX.CrossPlatform;
 {$R wheel.res}
 
 var
@@ -69,23 +73,27 @@ var
 constructor TWait.Create;
 var
   LStream: TResourceStream;
+  LColor: TAlphaColorRec;
 begin
   inherited;
   FPopup := TCustomPopupForm.Create(nil, nil, nil);
   with FPopup do
   begin
     // Little inconsistency in FMX: A TCustomPopupForm's size is NOT defined by width and height!
+    // Even though we specify a sice, the popup itself will be covering the whole screen in the end.
     Size := TSizeF.Create(160, 96);
     // We want the Wait Popup to be centered over the screen, which FMX calls a PlacementTarget
     // Unfortunately the Screen itself cannot be set as such a target, but we can specify a target's
     // rectangle alternatively
 
-    if Assigned(Application.MainForm) then
+    // In mobile applications, we want to cover the whole screen, for desktop apps we
+    // rather cover the current form
+    if not(IsMobilePlatform) and Assigned(Screen.ActiveForm) then
     begin
-      PlacementRectangle.Left := Application.MainForm.Left;
-      PlacementRectangle.Top := Application.MainForm.Top;
-      PlacementRectangle.Right := PlacementRectangle.Left + Application.MainForm.Width;
-      PlacementRectangle.Bottom := PlacementRectangle.Top + Application.MainForm.Height;
+      PlacementRectangle.Left := Screen.ActiveForm.Left;
+      PlacementRectangle.Top := Screen.ActiveForm.Top;
+      PlacementRectangle.Right := PlacementRectangle.Left + Screen.ActiveForm.Width;
+      PlacementRectangle.Bottom := PlacementRectangle.Top + Screen.ActiveForm.Height;
     end
     else
     begin
@@ -94,16 +102,32 @@ begin
       PlacementRectangle.Right := Screen.Size.Width;
       PlacementRectangle.Bottom := Screen.Size.Height;
     end;
+    Padding.Left := 0;
+    Padding.Right := 0;
+    Padding.Top := 0;
+    Padding.Bottom := 0;
+
     // We want it centered
     Placement := TPlacement.Center;
     Transparency := true;
     FormStyle := TFormStyle.StayOnTop;
   end;
 
-  FRectWait := TRectangle.Create(FPopup);
+  // In order to dim the background a semi-transparent, white rectangle is used
+  FRectDim := TRectangle.Create(FPopup);
+  with FRectDim do
+  begin
+    Parent := FPopup;
+    Align := TAlignLayout.Client;
+    LColor := TAlphaColorRec.Create(TAlphaColorRec.White);
+    LColor.A := 128;
+    Fill.Color := LColor.Color;
+    Sides := [];
+  end;
+
+  FRectWait := TRectangle.Create(FRectDim);
   with FRectWait do
   begin
-    // Name := 'RectWait';
     Parent := FPopup;
     Align := TAlignLayout.Center;
     Height := 96.0;
@@ -115,7 +139,6 @@ begin
   FLabelWait := TLabel.Create(FPopup);
   with FLabelWait do
   begin
-    // Name := 'LabelWait';
     Parent := FRectWait;
     Align := TAlignLayout.Bottom;
     Height := 50.0;
@@ -134,7 +157,6 @@ begin
   with FWheelImage do
   begin
     Parent := FRectWait;
-    // Name := 'WheelImage';
     Height := 38.0;
     Width := 38.0;
     Position.X := 61.0;
@@ -147,7 +169,6 @@ begin
   FWheelAnimation := TBitmapListAnimation.Create(FPopup);
   with FWheelAnimation do
   begin
-    // Name := 'WheelAnimation';
     Parent := FWheelImage;
     AnimationBitmap := FWheelBitmap;
     PropertyName := 'Bitmap';
@@ -156,9 +177,6 @@ begin
     Loop := true;
     Enabled := true;
   end;
-
-  // if FileExists(TPath.Combine(TPath.GetDocumentsPath, 'wheel.png')) then
-  // FWheelBitmap := TBitmap.CreateFromFile(TPath.Combine(TPath.GetDocumentsPath, 'wheel.png'));
 
   FShowCount := 0;
 end;
@@ -178,12 +196,25 @@ begin
   Result := FLabelWait.Text;
 end;
 
+procedure TWait.SetDim(const Value: Boolean);
+var
+  LColor: TAlphaColorRec;
+begin
+  FDim := Value;
+  LColor := TAlphaColorRec.Create(TAlphaColorRec.White);
+  if FDim then
+    LColor.A := 128
+  else
+    LColor.A := 0;
+  FRectDim.Fill.Color := LColor.Color;
+end;
+
 procedure TWait.SetMessage(const Value: string);
 begin
   FLabelWait.Text := Value;
 end;
 
-class procedure TWait.Start(AMessage: string);
+class procedure TWait.Start(AMessage: string; ADimBackground: Boolean = False);
 begin
   if not Assigned(GInstance) then
   begin
@@ -192,6 +223,7 @@ begin
 
   GInstance.ShowCount := GInstance.ShowCount + 1;
   GInstance.Message := AMessage;
+  GInstance.Dim := ADimBackground;
 
   GInstance.FPopup.Show;
 end;
