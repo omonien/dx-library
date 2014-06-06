@@ -65,7 +65,7 @@ implementation
 
 uses
   System.IOUtils, System.UIConsts, DX.CrossPlatform;
-{$R wheel.res wheel.rc}
+{$R wheel.res}
 
 var
   GInstance: TWait = nil;
