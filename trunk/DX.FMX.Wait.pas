@@ -216,6 +216,8 @@ end;
 
 class procedure TWait.Start(AMessage: string; ADimBackground: Boolean = False);
 begin
+  Assert(TThread.CurrentThread.ThreadID = MainThreadID, 'TWait.Start must be called from the application''s main thread');
+
   if not Assigned(GInstance) then
   begin
     GInstance := TWait.Create;
@@ -224,8 +226,9 @@ begin
   GInstance.ShowCount := GInstance.ShowCount + 1;
   GInstance.Message := AMessage;
   GInstance.Dim := ADimBackground;
-
   GInstance.FPopup.Show;
+  //Make sure the dialog will be shown - even if the main thread will be busy afterwards
+  Application.ProcessMessages;
 end;
 
 class procedure TWait.Stop;
