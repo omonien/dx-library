@@ -222,7 +222,7 @@ begin
   begin
     GInstance := TWait.Create;
   end;
-
+  GInstance.FWheelAnimation.Enabled := true;
   GInstance.ShowCount := GInstance.ShowCount + 1;
   GInstance.Message := AMessage;
   GInstance.Dim := ADimBackground;
@@ -239,9 +239,13 @@ begin
     begin
       GInstance.ShowCount := GInstance.ShowCount - 1;
       if GInstance.ShowCount = 0 then
-        GInstance.FPopup.Hide;
+      begin
+        GInstance.FPopup.Close;
+        GInstance.FWheelAnimation.Enabled := false;
+      end;
       // We could be lazy and not destroy - but every byte counts on mobile devices ;-)
-      FreeAndNil(GInstance);
+      GInstance.DisposeOf;
+      GInstance := nil;
     end;
   end;
 end;
