@@ -1,4 +1,4 @@
-unit DX.Async.Comand;
+unit DX.Threading.AsyncComand;
 
 interface
 
