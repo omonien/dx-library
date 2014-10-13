@@ -42,7 +42,7 @@ type
 
   class var
     FTerminating: Boolean;
-
+    FExternalStringsOnTop: Boolean;
     FExternalStrings: TStrings;
     FLogBuffer: TStrings;
     FThread: TThread;
@@ -51,10 +51,10 @@ type
     destructor Destroy; reintroduce;
     function ExternalStringsAssigned: Boolean;
   public
-    ///	<summary>
-    ///	  External Strings can be used to log to a TMemo. Updates are done via Synchronize/Main Thread
-    ///	</summary>
-    class procedure SetExternalStrings(AStrings: TStrings);
+    /// <summary>
+    /// External Strings can be used to log to a TMemo. Updates are done via Synchronize/Main Thread
+    /// </summary>
+    class procedure SetExternalStrings(AStrings: TStrings; AInsertOnTop: Boolean = false);
     class procedure Log(AMessage: string);
     class function Instance: TDXLogger;
   end;
@@ -64,17 +64,18 @@ procedure Log(AMessage: string);
 implementation
 
 {$IFDEF MSWINDOWS}
+
 uses
   Windows,
   Messages;
 {$ENDIF}
-
 {$IF defined(IOS) or Defined(MACOS)}
+
 uses
   DX.Apple.Utils;
 {$ENDIF}
-
 {$IFDEF Android}
+
 uses
   AndroidAPI.Log;
 {$ENDIF}
@@ -149,11 +150,12 @@ begin
   end;
 end;
 
-class procedure TDXLogger.SetExternalStrings(AStrings: TStrings);
+class procedure TDXLogger.SetExternalStrings(AStrings: TStrings; AInsertOnTop: Boolean = false);
 begin
   TMonitor.Enter(Instance);
   try
     FExternalStrings := AStrings;
+    FExternalStringsOnTop := AInsertOnTop;
   finally
     TMonitor.Exit(Instance);
   end;
@@ -255,7 +257,7 @@ procedure TLogThread.UpdateConsole;
 var
   LMessage: string;
 {$IFDEF Android}
-  LMarshaller : TMarshaller;
+  LMarshaller: TMarshaller;
 {$ENDIF}
 begin
   for LMessage in FTempBuffer do
@@ -274,13 +276,22 @@ begin
 end;
 
 procedure TLogThread.UpdateExternalStrings;
+var
+  s: string;
 begin
-  if (TDXLogger.Instance <> nil) and Assigned(TDXLogger.FExternalStrings) and Assigned(FExternalBuffer) and
-    not TDXLogger.FTerminating then
+  if (TDXLogger.Instance <> nil) and Assigned(TDXLogger.FExternalStrings) and Assigned(FExternalBuffer) and not TDXLogger.FTerminating then
     try
       TMonitor.Enter(FExternalBuffer);
       try
-        TDXLogger.FExternalStrings.AddStrings(FExternalBuffer);
+        if TDXLogger.FExternalStringsOnTop then
+        begin
+          for s in FExternalBuffer do
+          begin
+            TDXLogger.FExternalStrings.Insert(0, s);
+          end;
+        end
+        else
+          TDXLogger.FExternalStrings.AddStrings(FExternalBuffer);
         // We might offer a method to hand over a scrolling control handle
         // SendMessage(FMemo.Handle, EM_LINESCROLL, 0, GLogger.FMemo.Lines.Count);
         FExternalBuffer.Clear;
