@@ -1,4 +1,4 @@
-unit DX.Async;
+unit DX.Threading;
 
 interface
 
@@ -43,8 +43,8 @@ type
     FObjectsToFree: TDynObjectArray;
     FSynchronizeCompletionHandler: Boolean;
   public
-    constructor Create(ACommand: TCommand; ACompletionHandler: TCompletionHandler = nil; AErrorHandler: TErrorHandler = nil; ASynchronized: Boolean = true);
-      reintroduce; overload;
+    constructor Create(ACommand: TCommand; ACompletionHandler: TCompletionHandler = nil; AErrorHandler: TErrorHandler = nil;
+      ASynchronized: Boolean = true); reintroduce; overload;
     constructor Create(ACommand: TCommand; const AObjetcsToFree: TDynObjectArray; ACompletionHandler: TCompletionHandler = nil;
       AErrorHandler: TErrorHandler = nil; ASynchronized: Boolean = true); reintroduce; overload;
 
@@ -140,11 +140,11 @@ type
     /// <param name="ASynchronized">
     /// Flag to control the execution
     /// </param>
-    procedure Append(ACommand: TProc; ACompletionHandler: TCompletionHandler = nil; AErrorHandler: TErrorHandler = nil; ASynchronized: Boolean = true);
-      overload;
-
-    procedure Append(ACommand: TProc; const AObjectsToFree: TDynObjectArray; ACompletionHandler: TCompletionHandler = nil; AErrorHandler: TErrorHandler = nil;
+    procedure Append(ACommand: TProc; ACompletionHandler: TCompletionHandler = nil; AErrorHandler: TErrorHandler = nil;
       ASynchronized: Boolean = true); overload;
+
+    procedure Append(ACommand: TProc; const AObjectsToFree: TDynObjectArray; ACompletionHandler: TCompletionHandler = nil;
+      AErrorHandler: TErrorHandler = nil; ASynchronized: Boolean = true); overload;
 
     procedure Append(ACommand: TAsyncCommand); overload;
 
@@ -437,7 +437,8 @@ begin
   FObjectsToFree := AObjetcsToFree;
 end;
 
-constructor TAsyncCommand.Create(ACommand: TCommand; ACompletionHandler: TCompletionHandler; AErrorHandler: TErrorHandler; ASynchronized: Boolean);
+constructor TAsyncCommand.Create(ACommand: TCommand; ACompletionHandler: TCompletionHandler; AErrorHandler: TErrorHandler;
+  ASynchronized: Boolean);
 var
   LObjects: TDynObjectArray;
 begin
