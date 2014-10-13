@@ -50,6 +50,13 @@ unit DX.Apple.Utils;
 
 interface
 
+uses
+  System.SysUtils,
+{$IF Defined(IOS)}
+  iOSApi.Foundation;
+{$ELSEIF Defined(MACOS)}
+Macapi.Foundation;
+{$ENDIF}
 /// <summary>
 /// Logs to the console
 /// </summary>
@@ -73,6 +80,11 @@ procedure NSLog2(const AMessage: string; AAddTimeStamp: boolean = false);
 /// Raises an Exception if ANSError is <> nil
 /// </summary>
 procedure RaiseOnNSError(ANSError: Pointer);
+
+/// <summary>
+/// Performs the magic to cast an NSObject to an iOS/Mac pointer, as required by some Cocoa functions
+/// </summary>
+function NSObjectToPointer(AObject: NSObject): Pointer;
 
 {$IFDEF IOS}
 /// <summary>
@@ -98,24 +110,17 @@ procedure ExcludeFromBackup(const APath: string);
 implementation
 
 uses
-  System.SysUtils,
-  Apple.Utils,
-  // Apple.Utils.pas ships with XE4 & XE5 and can usually be found here:
-  // C:\Users\Public\Documents\RADStudio\11.0\Samples\Delphi\RTL\CrossPlatform Utils
-  // C:\Users\Public\Documents\RAD Studio\12.0\Samples\Delphi\RTL\CrossPlatform Utils
-
 {$IF Defined(IOS) or Defined(MACOS)}
   Macapi.ObjectiveC,
   Macapi.Helpers,
 {$ENDIF}
 {$IF Defined(IOS)}
-  iOSApi.Foundation,
   iOSApi.UIKit,
   iOSApi.QuartzCore,
-  iOSApi.CocoaTypes
+  iOSApi.CocoaTypes,
+  FMX.Helpers.iOS
 {$ELSEIF Defined(MACOS)}
-  Macapi.ObjCRuntime,
-  Macapi.Foundation
+  Macapi.ObjCRuntime
 {$ENDIF}
     ;
 
@@ -175,6 +180,11 @@ type
 const
   libFoundation = '/System/Library/Frameworks/Foundation.framework/Foundation';
 
+function NSObjectToPointer(AObject: NSObject): Pointer;
+begin
+  Result := (AObject as ILocalObject).GetObjectID;
+end;
+
 procedure NSLog2(const AMessage: string; AAddTimeStamp: boolean = false);
 var
   LMessage: NSString;
@@ -186,7 +196,7 @@ begin
   else
     LTimeStamp := '';
   LMessage := StrToNSStr(LTimeStamp + AMessage);
-  NSLog(PtrForObject(LMessage));
+  NSLog(NSObjectToPointer(LMessage));
 end;
 
 procedure RaiseOnNSError(ANSError: Pointer);
@@ -233,12 +243,12 @@ var
   LDevice: DX.Apple.Utils.UIDevice;
 begin
   LDevice := currentDevice;
-  Result := NSStringToString(LDevice.identifierForVendor.UUIDString);
+    Result := NSStrToStr(LDevice.identifierForVendor.UUIDString);
 end;
 
 function CanOpenURL(const AURL: string): boolean;
 begin
-  Result := SharedApplication.CanOpenURL(StringToNSUrl(AURL));
+  Result := SharedApplication.CanOpenURL(TNSURL.Wrap(TNSURL.OCClass.URLWithString(StrToNSStr(AURL))));
 end;
 {$ENDIF}
 
