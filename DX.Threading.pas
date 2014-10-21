@@ -33,9 +33,9 @@ type
       /// <summary>
       /// Appends Acommand to the (end of the) list.
       /// </summary>
-      procedure Append(ACommand: TAsyncCommand);
+      procedure Run(ACommand: TAsyncCommand);
       /// <summary>
-      /// Returns a reference to the first (head) command.
+      /// Returns a reference to the first (head) command - and marks it as "owned"
       /// </summary>
       function First: TAsyncCommand;
       /// <summary>
@@ -47,6 +47,10 @@ type
       /// Removes the first (head) command from the list
       /// </summary>
       procedure Remove(ACommand: TAsyncCommand);
+      /// <summary>
+      /// Cancels and removes all commands
+      /// </summary>
+      procedure Cancel;
     end;
 
     TCommandThread = class(TThread)
@@ -77,8 +81,9 @@ type
     /// <param name="AErrorHandler">
     /// A anonymous method to be executed after the asynchronous operation completes unsuccessfully.
     /// </param>
-    procedure Append(AExecutionProc: TProc; ADoneProc: TProc = nil; AErrorProc: TErrorProc = nil);
+    procedure Run(AExecutionProc: TProc; ADoneProc: TProc = nil; AErrorProc: TErrorProc = nil);
 
+    procedure Cancel;
     procedure WaitForDone;
   end;
 
@@ -113,12 +118,17 @@ begin
   Result := GQueue;
 end;
 
-procedure TAsyncCommandQueue.Append(AExecutionProc, ADoneProc: TProc; AErrorProc: TErrorProc);
+procedure TAsyncCommandQueue.Run(AExecutionProc: TProc; ADoneProc: TProc = nil; AErrorProc: TErrorProc = nil);
 var
   LCommand: TAsyncCommand;
 begin
   LCommand := TAsyncCommand.Create(AExecutionProc, ADoneProc, AErrorProc, False);
-  FCommands.Append(LCommand);
+  FCommands.Run(LCommand);
+end;
+
+procedure TAsyncCommandQueue.Cancel;
+begin
+  FCommands.Cancel;
 end;
 
 constructor TAsyncCommandQueue.Create;
@@ -190,7 +200,7 @@ end;
 
 { TAsyncCommandQueue.TCommandBuffer }
 
-procedure TAsyncCommandQueue.TCommandBuffer.Append(ACommand: TAsyncCommand);
+procedure TAsyncCommandQueue.TCommandBuffer.Run(ACommand: TAsyncCommand);
 begin
   if assigned(ACommand) then
   begin
@@ -210,6 +220,7 @@ begin
     if Count > 0 then
     begin
       Result := Items[0];
+      Result.Owned := true;
     end
     else
       Result := nil;
@@ -238,6 +249,26 @@ begin
     finally
       TMonitor.Exit(self);
     end;
+  end;
+end;
+
+procedure TAsyncCommandQueue.TCommandBuffer.Cancel;
+var
+  i: Integer;
+  LItem: TAsyncCommand;
+begin
+  TMonitor.Enter(self);
+  try
+    while Count > 0 do
+    begin
+      LItem := Items[Count - 1];
+      LItem.terminate;
+      Delete(Count - 1);
+      if not LItem.Owned then
+        LItem.Free;
+    end;
+  finally
+    TMonitor.Exit(self);
   end;
 end;
 
