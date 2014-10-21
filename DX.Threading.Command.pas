@@ -17,6 +17,9 @@ type
   public
     constructor Create(const AExecutionProc: TProc; const ADoneProc: TProc = nil; const AErrorProc: TErrorProc = nil;
       AFreeOnDone: Boolean = true); reintroduce;
+    class function Run(const AExecutionProc: TProc; const ADoneProc: TProc = nil; const AErrorProc: TErrorProc = nil;
+      AFreeOnDone: Boolean = true): TAsyncCommand;
+
     property DoneProc: TProc read FDoneProc;
     property ErrorProc: TErrorProc read FErrorProc;
     property ExecutionProc: TProc read FExecutionProc;
@@ -66,6 +69,12 @@ begin
       end;
     end;
   end;
+end;
+
+class function TAsyncCommand.Run(const AExecutionProc, ADoneProc: TProc; const AErrorProc: TErrorProc; AFreeOnDone: Boolean): TAsyncCommand;
+begin
+  result := TAsyncCommand.Create(AExecutionProc, ADoneProc, AErrorProc, AFreeOnDone);
+  result.Start;
 end;
 
 initialization
