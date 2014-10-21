@@ -12,6 +12,9 @@ type
   private
     FExecutionProc, FDoneProc: TProc;
     FErrorProc: TErrorProc;
+    FOwned: Boolean;
+    function GetOwned: Boolean;
+    procedure SetOwned(const Value: Boolean);
   protected
     procedure Execute; override;
   public
@@ -23,6 +26,7 @@ type
     property DoneProc: TProc read FDoneProc;
     property ErrorProc: TErrorProc read FErrorProc;
     property ExecutionProc: TProc read FExecutionProc;
+    property Owned: Boolean read GetOwned write SetOwned;
   end;
 
 implementation
@@ -40,6 +44,7 @@ begin
   FExecutionProc := AExecutionProc;
   FDoneProc := ADoneProc;
   FErrorProc := AErrorProc;
+  FOwned := false;
 end;
 
 procedure TAsyncCommand.Execute;
@@ -71,10 +76,31 @@ begin
   end;
 end;
 
+function TAsyncCommand.GetOwned: Boolean;
+begin
+  TMonitor.Enter(Self);
+  try
+    result := FOwned;
+  finally
+    TMonitor.Exit(Self);
+  end;
+end;
+
 class function TAsyncCommand.Run(const AExecutionProc, ADoneProc: TProc; const AErrorProc: TErrorProc; AFreeOnDone: Boolean): TAsyncCommand;
 begin
   result := TAsyncCommand.Create(AExecutionProc, ADoneProc, AErrorProc, AFreeOnDone);
   result.Start;
+end;
+
+procedure TAsyncCommand.SetOwned(const Value: Boolean);
+begin
+  TMonitor.Enter(Self);
+  try
+    FOwned := Value;
+  finally
+    TMonitor.Exit(Self);
+  end;
+
 end;
 
 initialization
