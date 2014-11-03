@@ -216,38 +216,44 @@ end;
 
 class procedure TWait.Start(AMessage: string; ADimBackground: Boolean = False);
 begin
-  Assert(TThread.CurrentThread.ThreadID = MainThreadID, 'TWait.Start must be called from the application''s main thread');
-
-  if not Assigned(GInstance) then
-  begin
-    GInstance := TWait.Create;
-  end;
-  GInstance.FWheelAnimation.Enabled := true;
-  GInstance.ShowCount := GInstance.ShowCount + 1;
-  GInstance.Message := AMessage;
-  GInstance.Dim := ADimBackground;
-  GInstance.FPopup.Show;
-  //Make sure the dialog will be shown - even if the main thread will be busy afterwards
-  Application.ProcessMessages;
+  TThread.Queue(nil,
+    procedure
+    begin
+      if not Assigned(GInstance) then
+      begin
+        GInstance := TWait.Create;
+      end;
+      GInstance.FWheelAnimation.Enabled := true;
+      GInstance.ShowCount := GInstance.ShowCount + 1;
+      GInstance.Message := AMessage;
+      GInstance.Dim := ADimBackground;
+      GInstance.FPopup.Show;
+      // Make sure the dialog will be shown - even if the main thread will be busy afterwards
+      Application.ProcessMessages;
+    end);
 end;
 
 class procedure TWait.Stop;
 begin
-  if Assigned(GInstance) then
-  begin
-    if GInstance.ShowCount > 0 then
+  TThread.Queue(nil,
+    procedure
     begin
-      GInstance.ShowCount := GInstance.ShowCount - 1;
-      if GInstance.ShowCount = 0 then
+      if Assigned(GInstance) then
       begin
-        GInstance.FPopup.Close;
-        GInstance.FWheelAnimation.Enabled := false;
+        if GInstance.ShowCount > 0 then
+        begin
+          GInstance.ShowCount := GInstance.ShowCount - 1;
+          if GInstance.ShowCount = 0 then
+          begin
+            GInstance.FPopup.Close;
+            GInstance.FWheelAnimation.Enabled := False;
+          end;
+          // We could be lazy and not destroy - but every byte counts on mobile devices ;-)
+          GInstance.DisposeOf;
+          GInstance := nil;
+        end;
       end;
-      // We could be lazy and not destroy - but every byte counts on mobile devices ;-)
-      GInstance.DisposeOf;
-      GInstance := nil;
-    end;
-  end;
+    end);
 end;
 
 end.
