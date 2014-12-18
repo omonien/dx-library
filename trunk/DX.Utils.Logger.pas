@@ -39,9 +39,9 @@ type
   TDXLogger = class(TObject)
   private
     class var FInstance: TDXLogger;
+    class var FTerminating: Boolean;
 
-  class var
-    FTerminating: Boolean;
+  private
     FExternalStringsOnTop: Boolean;
     FExternalStrings: TStrings;
     FLogBuffer: TStrings;
@@ -143,7 +143,7 @@ begin
   begin
     TMonitor.Enter(Instance);
     try
-      FLogBuffer.Add(LMessage);
+      Instance.FLogBuffer.Add(LMessage);
     finally
       TMonitor.Exit(Instance);
     end;
@@ -154,8 +154,8 @@ class procedure TDXLogger.SetExternalStrings(AStrings: TStrings; AInsertOnTop: B
 begin
   TMonitor.Enter(Instance);
   try
-    FExternalStrings := AStrings;
-    FExternalStringsOnTop := AInsertOnTop;
+    Instance.FExternalStrings := AStrings;
+    Instance.FExternalStringsOnTop := AInsertOnTop;
   finally
     TMonitor.Exit(Instance);
   end;
@@ -185,10 +185,10 @@ begin
     sleep(100);
     TMonitor.Enter(TDXLogger.Instance);
     try
-      if (TDXLogger.FLogBuffer.Count > 0) then
+      if (TDXLogger.Instance.FLogBuffer.Count > 0) then
       begin
-        FTempBuffer.AddStrings(TDXLogger.FLogBuffer);
-        TDXLogger.FLogBuffer.Clear;
+        FTempBuffer.AddStrings(TDXLogger.Instance.FLogBuffer);
+        TDXLogger.Instance.FLogBuffer.Clear;
       end;
     finally
       TMonitor.Exit(TDXLogger.Instance);
@@ -279,19 +279,19 @@ procedure TLogThread.UpdateExternalStrings;
 var
   s: string;
 begin
-  if (TDXLogger.Instance <> nil) and Assigned(TDXLogger.FExternalStrings) and Assigned(FExternalBuffer) and not TDXLogger.FTerminating then
+  if (TDXLogger.Instance <> nil) and Assigned(TDXLogger.Instance.FExternalStrings) and Assigned(FExternalBuffer) and not TDXLogger.FTerminating then
     try
       TMonitor.Enter(FExternalBuffer);
       try
-        if TDXLogger.FExternalStringsOnTop then
+        if TDXLogger.Instance.FExternalStringsOnTop then
         begin
           for s in FExternalBuffer do
           begin
-            TDXLogger.FExternalStrings.Insert(0, s);
+            TDXLogger.Instance.FExternalStrings.Insert(0, s);
           end;
         end
         else
-          TDXLogger.FExternalStrings.AddStrings(FExternalBuffer);
+          TDXLogger.Instance.FExternalStrings.AddStrings(FExternalBuffer);
         // We might offer a method to hand over a scrolling control handle
         // SendMessage(FMemo.Handle, EM_LINESCROLL, 0, GLogger.FMemo.Lines.Count);
         FExternalBuffer.Clear;
