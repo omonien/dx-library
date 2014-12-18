@@ -32,7 +32,7 @@ type
 implementation
 
 uses
-  System.Threading, IdHTTP, IdTCPClient;
+  System.Threading, IdHTTP, IdTCPClient, DX.Utils.Logger;
 
 { TDXConnectivity }
 
@@ -54,16 +54,16 @@ end;
 procedure TDXConnectivity.DoConnectivityChanged;
 begin
   if DeviceIsOnline then
-    Log('Online!');
-else
-  Log('Offline!');
-if Assigned(FOnConnectivityChanged) then
-  // Synchronize - don't queue. That avoids "hyper activity" if connection is very flaky
-  TThread.Synchronize(nil,
-    procedure
-    begin
-      FOnConnectivityChanged(Self)
-    end);
+    Log('Online!')
+  else
+    Log('Offline!');
+  if Assigned(FOnConnectivityChanged) then
+    // Synchronize - don't queue. That avoids "hyper activity" if connection is very flaky
+    TThread.Synchronize(nil,
+      procedure
+      begin
+        FOnConnectivityChanged(Self)
+      end);
 end;
 
 procedure TDXConnectivity.SetActive(const Value: Boolean);
