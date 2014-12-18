@@ -254,7 +254,6 @@ end;
 
 procedure TAsyncCommandQueue.TCommandBuffer.Cancel;
 var
-  i: Integer;
   LItem: TAsyncCommand;
 begin
   TMonitor.Enter(self);
