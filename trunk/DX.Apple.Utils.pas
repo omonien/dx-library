@@ -129,7 +129,16 @@ type
   /// Exception class which is use to raise Exceptions originating from NSErrors
   /// </summary>
   ENSError = class(Exception);
-{$IFDEF IOS}
+
+  // For better readability / portability
+  PNSString = Pointer;
+  id = Pointer;
+
+const
+  libFoundation = '/System/Library/Frameworks/Foundation.framework/Foundation';
+
+
+  {$IFDEF IOS}
 
   // Hack to import forgotten classes/functions and properties
   // Be careful - classes with same name may already exist in iOSApi!!
@@ -166,19 +175,11 @@ type
   end;
 {$ELSE}
 {$IFDEF MACOS}
-
 procedure NSLog(format: PNSString); cdecl; varargs; external libFoundation name _PU + 'NSLog';
 
 {$ENDIF MACOS}
 {$ENDIF IOS}
 
-type
-  // For better readability / portability
-  PNSString = Pointer;
-  id = Pointer;
-
-const
-  libFoundation = '/System/Library/Frameworks/Foundation.framework/Foundation';
 
 function NSObjectToPointer(AObject: NSObject): Pointer;
 begin
