@@ -27,8 +27,7 @@ unit DX.Utils.Logger;
 interface
 
 uses
-  Sysutils,
-  Classes;
+  System.Classes, System.SysUtils;
 
 type
 {$REGION 'Documentation'}
@@ -40,22 +39,35 @@ type
   private
     class var FInstance: TDXLogger;
     class var FTerminating: Boolean;
-
   private
     FExternalStringsOnTop: Boolean;
     FExternalStrings: TStrings;
     FLogBuffer: TStrings;
     FThread: TThread;
+    FDateFormat: string;
   protected
     constructor Create;
     destructor Destroy; reintroduce;
+    class function GetDateFormat: string; static;
+    class procedure SetExternalStrings(AStrings: TStrings); static;
+    class procedure SetExternalStringsAppendOnTop(const Value: Boolean); static;
+    class procedure SetDateFormat(ADateFormat: string); static;
     function ExternalStringsAssigned: Boolean;
   public
     /// <summary>
     /// External Strings can be used to log to a TMemo. Updates are done via Synchronize/Main Thread
     /// </summary>
-    class procedure SetExternalStrings(AStrings: TStrings; AInsertOnTop: Boolean = false);
-    class procedure Log(AMessage: string);
+    class property ExternalStrings: TStrings write SetExternalStrings;
+    /// <summary>
+    /// Insert new log messages on top of external strings.
+    /// </summary>
+    class property ExternalStringsAppendOnTop: Boolean write SetExternalStringsAppendOnTop;
+    /// <summary>
+    /// DateFormat is used to format the timestamp which prefixes every log message.
+    /// Defaults to YYYY-MM-DD hh:nn:ss,zzz
+    /// </summary>
+    class property DateFormat: string read GetDateFormat write SetDateFormat;
+    class procedure Log(const AMessage: string);
     class function Instance: TDXLogger;
   end;
 
@@ -135,6 +147,7 @@ begin
   FLogBuffer := TStringList.Create;
   FThread := TLogThread.Create;
   FExternalStrings := nil;
+  FDateFormat := 'YYYY-MM-DD hh:nn:ss,zzz';
   FThread.Start;
 end;
 
@@ -155,18 +168,30 @@ begin
   end;
 end;
 
+class function TDXLogger.GetDateFormat: string;
+begin
+  TMonitor.Enter(Instance);
+  try
+    result := Instance.FDateFormat;
+  finally
+    TMonitor.Exit(Instance);
+  end;
+end;
+
 class function TDXLogger.Instance: TDXLogger;
 begin
   if FTerminating then
     raise EAbort.Create('Terminating');
+  if FInstance = nil then
+    TDXLogger.FInstance := TDXLogger.Create;
   result := FInstance;
 end;
 
-class procedure TDXLogger.Log(AMessage: string);
+class procedure TDXLogger.Log(const AMessage: string);
 var
   LMessage: string;
 begin
-  LMessage := FormatDateTime('YYYY-MM-DD hh:nn:ss,zzz', now) + ' : ' + AMessage;
+  LMessage := FormatDateTime(DateFormat, now) + ' : ' + AMessage;
   if Assigned(Instance.FLogBuffer) then
   begin
     TMonitor.Enter(Instance);
@@ -178,15 +203,35 @@ begin
   end;
 end;
 
-class procedure TDXLogger.SetExternalStrings(AStrings: TStrings; AInsertOnTop: Boolean = false);
+class procedure TDXLogger.SetDateFormat(ADateFormat: string);
+begin
+  TMonitor.Enter(Instance);
+  try
+    Instance.FDateFormat := ADateFormat;
+  finally
+    TMonitor.Exit(Instance);
+  end;
+end;
+
+class procedure TDXLogger.SetExternalStrings(AStrings: TStrings);
 begin
   TMonitor.Enter(Instance);
   try
     Instance.FExternalStrings := AStrings;
-    Instance.FExternalStringsOnTop := AInsertOnTop;
   finally
     TMonitor.Exit(Instance);
   end;
+end;
+
+class procedure TDXLogger.SetExternalStringsAppendOnTop(const Value: Boolean);
+begin
+  TMonitor.Enter(Instance);
+  try
+    Instance.FExternalStringsOnTop := Value;
+  finally
+    TMonitor.Exit(Instance);
+  end;
+
 end;
 
 { TLogThread }
@@ -336,7 +381,6 @@ end;
 initialization
 
 TDXLogger.FTerminating := false;
-TDXLogger.FInstance := TDXLogger.Create;
 
 finalization
 
