@@ -59,7 +59,20 @@ type
     class function Instance: TDXLogger;
   end;
 
-procedure Log(AMessage: string);
+  /// <summary>
+  /// Shortcut to log a message
+  /// </summary>
+procedure Log(const AMessage: string); overload;
+/// <summary>
+/// Shortcut to log a message with format string
+/// </summary>
+procedure Log(const AFormatString: string; const AValues: Array of const); overload;
+/// <summary>
+/// Shortcut to to avoid name clashes with other logging systems
+/// </summary>
+procedure DXLog(const AMessage: string); overload;
+/// Shortcut to to avoid name clashes with other logging systems
+procedure DXLog(const AFormatString: string; const AValues: Array of const); overload;
 
 implementation
 
@@ -95,9 +108,24 @@ type
     procedure SyncronizeExternalStrings;
   end;
 
-procedure Log(AMessage: string);
+procedure Log(const AMessage: string);
 begin
   TDXLogger.Log(AMessage);
+end;
+
+procedure Log(const AFormatString: string; const AValues: Array of const);
+begin
+  TDXLogger.Log(Format(AFormatString, AValues));
+end;
+
+procedure DXLog(const AMessage: string); overload;
+begin
+  Log(AMessage);
+end;
+
+procedure DXLog(const AFormatString: string; const AValues: Array of const); overload;
+begin
+  Log(AFormatString, AValues);
 end;
 
 { TDXLogger }
@@ -172,6 +200,7 @@ end;
 
 destructor TLogThread.Destroy;
 begin
+  Terminate;
   FreeAndNil(FExternalBuffer);
   FreeAndNil(FTempBuffer);
   inherited;
@@ -279,7 +308,8 @@ procedure TLogThread.UpdateExternalStrings;
 var
   s: string;
 begin
-  if (TDXLogger.Instance <> nil) and Assigned(TDXLogger.Instance.FExternalStrings) and Assigned(FExternalBuffer) and not TDXLogger.FTerminating then
+  if (TDXLogger.Instance <> nil) and Assigned(TDXLogger.Instance.FExternalStrings) and Assigned(FExternalBuffer) and not TDXLogger.FTerminating
+  then
     try
       TMonitor.Enter(FExternalBuffer);
       try
