@@ -7,6 +7,8 @@ uses
 
 function IsMobilePlatform: boolean;
 
+function CanOpenURL(const AUrl:string): boolean;
+
 implementation
 
 function IsMobilePlatform: boolean;
@@ -16,6 +18,11 @@ begin
 {$ELSE}
   Result := true;
 {$ENDIF}
+end;
+
+function CanOpenURL(const AUrl:string): boolean;
+begin
+  Result := false;
 end;
 
 end.
