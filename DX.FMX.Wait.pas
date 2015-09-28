@@ -248,7 +248,7 @@ begin
             GInstance.FPopup.Close;
             GInstance.FWheelAnimation.Enabled := False;
           end;
-          // We could be lazy and not destroy - but every byte counts on mobile devices ;-)
+          // We could keep the instance - but every byte counts on mobile devices ;-)
           GInstance.DisposeOf;
           GInstance := nil;
         end;
