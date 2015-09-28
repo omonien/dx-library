@@ -137,8 +137,7 @@ type
 const
   libFoundation = '/System/Library/Frameworks/Foundation.framework/Foundation';
 
-
-  {$IFDEF IOS}
+{$IFDEF IOS}
 
   // Hack to import forgotten classes/functions and properties
   // Be careful - classes with same name may already exist in iOSApi!!
@@ -175,11 +174,11 @@ type
   end;
 {$ELSE}
 {$IFDEF MACOS}
+
 procedure NSLog(format: PNSString); cdecl; varargs; external libFoundation name _PU + 'NSLog';
 
 {$ENDIF MACOS}
 {$ENDIF IOS}
-
 
 function NSObjectToPointer(AObject: NSObject): Pointer;
 begin
@@ -244,7 +243,7 @@ var
   LDevice: DX.Apple.Utils.UIDevice;
 begin
   LDevice := currentDevice;
-    Result := NSStrToStr(LDevice.identifierForVendor.UUIDString);
+  Result := NSStrToStr(LDevice.identifierForVendor.UUIDString);
 end;
 
 function CanOpenURL(const AURL: string): boolean;
