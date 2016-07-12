@@ -1,13 +1,14 @@
 {$REGION 'Documentation'}
 /// <summary>
-/// DX.Utils.Logger provides an easy to use logging mechanism
+/// DX.Utils.Logger provides an easy to use logging mechanism. The logging is
+/// completely multithreaded and will not change the timing of the application.
 /// </summary>
 /// <remarks>
 /// <para>
 /// DX.Utils.Logger is part of DX.Library
 /// </para>
 /// <para>
-/// See: <see href="http://code.google.com/p/dx-library/" />
+/// See:
 /// </para>
 /// </remarks>
 /// <example>
@@ -32,7 +33,7 @@ uses
 type
 {$REGION 'Documentation'}
   /// <summary>
-  /// TFXLogger provides a thread-safe logging mechanism.
+  /// TDXLogger provides a thread-safe logging mechanism.
   /// </summary>
 {$ENDREGION}
   TDXLogger = class(TObject)
@@ -45,6 +46,7 @@ type
     FLogBuffer: TStrings;
     FThread: TThread;
     FDateFormat: string;
+    class function Lock: TObject; static;
   protected
     constructor Create;
     destructor Destroy; reintroduce;
@@ -67,8 +69,9 @@ type
     /// Defaults to YYYY-MM-DD hh:nn:ss,zzz
     /// </summary>
     class property DateFormat: string read GetDateFormat write SetDateFormat;
-    class procedure Log(const AMessage: string);
-    class function Instance: TDXLogger;
+    class procedure Log(const AMessage: string); overload;
+    class procedure Log(const AFormatString: string; const AValues: array of const); overload;
+    class function Instance: TDXLogger; static;
   end;
 
   /// <summary>
@@ -78,13 +81,13 @@ procedure Log(const AMessage: string); overload;
 /// <summary>
 /// Shortcut to log a message with format string
 /// </summary>
-procedure Log(const AFormatString: string; const AValues: Array of const); overload;
+procedure Log(const AFormatString: string; const AValues: array of const); overload;
 /// <summary>
 /// Shortcut to to avoid name clashes with other logging systems
 /// </summary>
 procedure DXLog(const AMessage: string); overload;
 /// Shortcut to to avoid name clashes with other logging systems
-procedure DXLog(const AFormatString: string; const AValues: Array of const); overload;
+procedure DXLog(const AFormatString: string; const AValues: array of const); overload;
 
 implementation
 
@@ -115,19 +118,21 @@ type
     FTempBuffer: TStrings; // Used to decouple the main buffer
     FExternalBuffer: TStrings; // Used as a separate buffer for writing to the external strings
     constructor Create;
-    destructor Destroy; Override;
-    procedure Execute; Override;
+    destructor Destroy; override;
+    procedure Execute; override;
     procedure SyncronizeExternalStrings;
   end;
+
+var FLock:TDXLogger;
 
 procedure Log(const AMessage: string);
 begin
   TDXLogger.Log(AMessage);
 end;
 
-procedure Log(const AFormatString: string; const AValues: Array of const);
+procedure Log(const AFormatString: string; const AValues: array of const);
 begin
-  TDXLogger.Log(Format(AFormatString, AValues));
+  TDXLogger.Log(AFormatString, AValues);
 end;
 
 procedure DXLog(const AMessage: string); overload;
@@ -135,7 +140,7 @@ begin
   Log(AMessage);
 end;
 
-procedure DXLog(const AFormatString: string; const AValues: Array of const); overload;
+procedure DXLog(const AFormatString: string; const AValues: array of const); overload;
 begin
   Log(AFormatString, AValues);
 end;
@@ -160,21 +165,21 @@ end;
 
 function TDXLogger.ExternalStringsAssigned: Boolean;
 begin
-  TMonitor.Enter(Instance);
+  TMonitor.Enter(Lock);
   try
     result := Assigned(FExternalStrings);
   finally
-    TMonitor.Exit(Instance);
+    TMonitor.Exit(Lock);
   end;
 end;
 
 class function TDXLogger.GetDateFormat: string;
 begin
-  TMonitor.Enter(Instance);
+  TMonitor.Enter(Lock);
   try
     result := Instance.FDateFormat;
   finally
-    TMonitor.Exit(Instance);
+    TMonitor.Exit(Lock);
   end;
 end;
 
@@ -187,6 +192,16 @@ begin
   result := FInstance;
 end;
 
+class function TDXLogger.Lock: TObject;
+begin
+    result := FLock;
+end;
+
+class procedure TDXLogger.Log(const AFormatString: string; const AValues: array of const);
+begin
+  Log(Format(AFormatString, AValues));
+end;
+
 class procedure TDXLogger.Log(const AMessage: string);
 var
   LMessage: string;
@@ -194,42 +209,42 @@ begin
   LMessage := FormatDateTime(DateFormat, now) + ' : ' + AMessage;
   if Assigned(Instance.FLogBuffer) then
   begin
-    TMonitor.Enter(Instance);
+    TMonitor.Enter(Lock);
     try
       Instance.FLogBuffer.Add(LMessage);
     finally
-      TMonitor.Exit(Instance);
+      TMonitor.Exit(Lock);
     end;
   end;
 end;
 
 class procedure TDXLogger.SetDateFormat(ADateFormat: string);
 begin
-  TMonitor.Enter(Instance);
+  TMonitor.Enter(Lock);
   try
     Instance.FDateFormat := ADateFormat;
   finally
-    TMonitor.Exit(Instance);
+    TMonitor.Exit(Lock);
   end;
 end;
 
 class procedure TDXLogger.SetExternalStrings(AStrings: TStrings);
 begin
-  TMonitor.Enter(Instance);
+  TMonitor.Enter(Lock);
   try
     Instance.FExternalStrings := AStrings;
   finally
-    TMonitor.Exit(Instance);
+    TMonitor.Exit(Lock);
   end;
 end;
 
 class procedure TDXLogger.SetExternalStringsAppendOnTop(const Value: Boolean);
 begin
-  TMonitor.Enter(Instance);
+  TMonitor.Enter(Lock);
   try
     Instance.FExternalStringsOnTop := Value;
   finally
-    TMonitor.Exit(Instance);
+    TMonitor.Exit(Lock);
   end;
 
 end;
@@ -256,7 +271,8 @@ procedure TLogThread.Execute;
 begin
   while not terminated do
   begin
-    sleep(100);
+    TMonitor.Wait(TDXLogger.Instance, 100);
+    // sleep(100);
     TMonitor.Enter(TDXLogger.Instance);
     try
       if (TDXLogger.Instance.FLogBuffer.Count > 0) then
@@ -286,13 +302,15 @@ procedure TLogThread.SyncronizeExternalStrings;
 begin
   if TDXLogger.Instance.ExternalStringsAssigned then
   begin
-    TMonitor.Enter(FExternalBuffer); // FExternalBuffer is cleared in the contex of the main thread (via Synchronize)
+    TMonitor.Enter(FExternalBuffer);
+    // FExternalBuffer is cleared in the contex of the main thread
     try
       FExternalBuffer.AddStrings(FTempBuffer);
     finally
       TMonitor.Exit(FExternalBuffer);
     end;
-    Synchronize(UpdateExternalStrings);
+    // Updating external strings may take a while - queue is good enough here
+    Queue(UpdateExternalStrings);
   end;
 end;
 
@@ -300,7 +318,7 @@ procedure TLogThread.UpdateLogFile;
 {$IF (defined(MSWindows) or defined(MacOS)) and not (defined(IOS)))}
 var
   F: TextFile;
-  s: String;
+  s: string;
   LFileName: string;
 {$ENDIF}
 begin
@@ -353,8 +371,8 @@ procedure TLogThread.UpdateExternalStrings;
 var
   s: string;
 begin
-  if (TDXLogger.Instance <> nil) and Assigned(TDXLogger.Instance.FExternalStrings) and Assigned(FExternalBuffer) and not TDXLogger.FTerminating
-  then
+  if (TDXLogger.Instance <> nil) and Assigned(TDXLogger.Instance.FExternalStrings) and Assigned(FExternalBuffer) and not TDXLogger.FTerminating then
+  begin
     try
       TMonitor.Enter(FExternalBuffer);
       try
@@ -367,8 +385,7 @@ begin
         end
         else
           TDXLogger.Instance.FExternalStrings.AddStrings(FExternalBuffer);
-        // We might offer a method to hand over a scrolling control handle
-        // SendMessage(FMemo.Handle, EM_LINESCROLL, 0, GLogger.FMemo.Lines.Count);
+        //
         FExternalBuffer.Clear;
       finally
         TMonitor.Exit(FExternalBuffer);
@@ -376,15 +393,16 @@ begin
     except
       // If logging fails, then there is nocthng we can do
     end;
+  end;
 end;
 
 initialization
-
 TDXLogger.FTerminating := false;
+FLock := TDXLogger.Create;
 
 finalization
 
 TDXLogger.FTerminating := true;
 FreeAndNil(TDXLogger.FInstance);
-
+FreeAndNil(FLock);
 end.
