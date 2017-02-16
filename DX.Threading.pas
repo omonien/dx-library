@@ -6,8 +6,7 @@ uses
   System.Classes, System.SysUtils,
   System.Generics.Defaults, System.Generics.Collections,
   System.SyncObjs,
-  DX.Threading.Command,
-  FMX.Forms;
+  DX.Threading.Command;
 
 type
   /// <summary>
@@ -92,15 +91,35 @@ type
   /// </summary>
 function GAsyncCommandQueue: TAsyncCommandQueue;
 
-implementation
+procedure BusyWait(AMSecs: cardinal);
 
-{ TAsyncCommandQueue }
+implementation
 
 uses
 {$IF Defined(MSWINDOWS)}
   Winapi.Windows,
 {$ENDIF}
-  REST.Exception;
+  FMX.Forms,
+  REST.Exception,
+  System.DateUtils;
+
+procedure BusyWait(AMSecs: cardinal);
+var
+  LStart: Extended;
+  LCPUInfo: TThread.TSystemTimes;
+begin
+  LStart := now;
+  TThread.GetSystemTimes(LCPUInfo);
+  while (now - AMSecs * OneMillisecond) < LStart do
+  begin
+    if TThread.GetCPUUsage(LCPUInfo) > 90 then
+      sleep(1)
+    else
+      // Nothing;
+  end;
+end;
+
+{ TAsyncCommandQueue }
 
 var
   GQueue: TAsyncCommandQueue = nil;
