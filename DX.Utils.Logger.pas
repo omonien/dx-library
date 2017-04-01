@@ -46,18 +46,16 @@ type
     FLogBuffer: TStrings;
     FThread: TThread;
     FDateFormat: string;
+    class function Lock: TObject; static;
   protected
     constructor Create;
+    destructor Destroy; reintroduce;
     class function GetDateFormat: string; static;
     class procedure SetExternalStrings(AStrings: TStrings); static;
     class procedure SetExternalStringsAppendOnTop(const Value: Boolean); static;
     class procedure SetDateFormat(ADateFormat: string); static;
     function ExternalStringsAssigned: Boolean;
   public
-    class constructor Create;
-    class destructor Destroy;
-    destructor Destroy; override;
-
     /// <summary>
     /// External Strings can be used to log to a TMemo. Updates are done via Synchronize/Main Thread
     /// </summary>
@@ -96,8 +94,8 @@ implementation
 {$IFDEF MSWINDOWS}
 
 uses
-  WinAPI.Windows,
-  WinAPI.Messages;
+  Windows,
+  Messages, System.IOUtils;
 {$ENDIF}
 {$IF defined(IOS) or Defined(MACOS)}
 
@@ -113,18 +111,25 @@ uses
 type
   TLogThread = class(TThread)
   private
-    FTempBuffer: TStrings; // Used to decouple the main buffer
-    FExternalBuffer: TStrings; // Used as a separate buffer for writing to the external strings
+    // Used to decouple the main buffer
+    FTempBuffer: TStrings;
+    // Used as a separate buffer for writing to the external strings
+    FExternalBuffer: TStrings;
+    // Todo make configurable
+    FLogFileName: string;
+
     procedure UpdateConsole;
     procedure UpdateLogFile;
     procedure UpdateExternalStrings;
-  protected
-    procedure Execute; override;
-    procedure SyncronizeExternalStrings;
   public
     constructor Create;
     destructor Destroy; override;
+    procedure Execute; override;
+    procedure SyncronizeExternalStrings;
   end;
+
+var
+  FLock: TDXLogger;
 
 procedure Log(const AMessage: string);
 begin
@@ -150,7 +155,6 @@ end;
 constructor TDXLogger.Create;
 begin
   inherited;
-  FTerminating := false;
   FLogBuffer := TStringList.Create;
   FThread := TLogThread.Create;
   FExternalStrings := nil;
@@ -165,40 +169,38 @@ begin
   inherited;
 end;
 
-class destructor TDXLogger.Destroy;
-begin
-  FTerminating := true;
-  FreeAndNil(FInstance);
-  inherited;
-end;
-
 function TDXLogger.ExternalStringsAssigned: Boolean;
 begin
-  TMonitor.Enter(FInstance);
+  TMonitor.Enter(Lock);
   try
     result := Assigned(FExternalStrings);
   finally
-    TMonitor.Exit(FInstance);
+    TMonitor.Exit(Lock);
   end;
 end;
 
 class function TDXLogger.GetDateFormat: string;
 begin
-  TMonitor.Enter(FInstance);
+  TMonitor.Enter(Lock);
   try
     result := Instance.FDateFormat;
   finally
-    TMonitor.Exit(FInstance);
+    TMonitor.Exit(Lock);
   end;
 end;
 
 class function TDXLogger.Instance: TDXLogger;
 begin
   if FTerminating then
-    raise EAbort.Create('Logger terminating');
+    raise EAbort.Create('Terminating');
   if FInstance = nil then
-    raise EAbort.Create('Logger not initialized');
+    TDXLogger.FInstance := TDXLogger.Create;
   result := FInstance;
+end;
+
+class function TDXLogger.Lock: TObject;
+begin
+  result := FLock;
 end;
 
 class procedure TDXLogger.Log(const AFormatString: string; const AValues: array of const);
@@ -213,59 +215,61 @@ begin
   LMessage := FormatDateTime(DateFormat, now) + ' : ' + AMessage;
   if Assigned(Instance.FLogBuffer) then
   begin
-    TMonitor.Enter(FInstance);
+    TMonitor.Enter(Lock);
     try
       Instance.FLogBuffer.Add(LMessage);
     finally
-      TMonitor.Exit(FInstance);
+      TMonitor.Exit(Lock);
     end;
   end;
 end;
 
 class procedure TDXLogger.SetDateFormat(ADateFormat: string);
 begin
-  TMonitor.Enter(FInstance);
+  TMonitor.Enter(Lock);
   try
     Instance.FDateFormat := ADateFormat;
   finally
-    TMonitor.Exit(FInstance);
+    TMonitor.Exit(Lock);
   end;
 end;
 
 class procedure TDXLogger.SetExternalStrings(AStrings: TStrings);
 begin
-  TMonitor.Enter(FInstance);
+  TMonitor.Enter(Lock);
   try
     Instance.FExternalStrings := AStrings;
   finally
-    TMonitor.Exit(FInstance);
+    TMonitor.Exit(Lock);
   end;
 end;
 
 class procedure TDXLogger.SetExternalStringsAppendOnTop(const Value: Boolean);
 begin
-  TMonitor.Enter(FInstance);
+  TMonitor.Enter(Lock);
   try
     Instance.FExternalStringsOnTop := Value;
   finally
-    TMonitor.Exit(FInstance);
+    TMonitor.Exit(Lock);
   end;
 
-end;
-
-class constructor TDXLogger.Create;
-begin
-  inherited;
-  FInstance := TDXLogger.Create;
 end;
 
 { TLogThread }
 
 constructor TLogThread.Create;
+var
+  s: string;
 begin
   inherited Create(true);
+
+  // Logfile goes into the app exe directory with name {Application name}.log
+  s := TPath.GetLibraryPath;
+  FLogFileName := TPath.Combine(s, TPath.ChangeExtension(TPath.GetFileName(ParamStr(0)), '.log'));
+
   FTempBuffer := TStringList.Create;
   FExternalBuffer := TStringList.Create;
+  FExternalBuffer.TrailingLineBreak := false;
 end;
 
 destructor TLogThread.Destroy;
@@ -277,18 +281,24 @@ begin
 end;
 
 procedure TLogThread.Execute;
-
+var
+  LBufferEmpty: Boolean;
 begin
+  LBufferEmpty := true;
+
   while not terminated do
   begin
-    // We don't want to check more frequently than 100 ms, as this would possibly
+    // If nothing is in the buffer, then sleep a bit, to avoid hammering
+    if LBufferEmpty then
+      sleep(100);
+    // We don't want to check more frequently than 100 ms, as this could potentially
     // generate way to frequent writes to the log file. If one log message comes in, then
     // an other one might follow within a few ms. We write them in "100ms" blocks, not
     // message by message.
-    sleep(100);
+
     TMonitor.Enter(TDXLogger.Instance);
     try
-      //Copy everything from LogBuffer as fast as possible - to block as little as possible.
+      // Copy everything from LogBuffer as fast as possible - to block as little as possible.
       if (TDXLogger.Instance.FLogBuffer.Count > 0) then
       begin
         FTempBuffer.AddStrings(TDXLogger.Instance.FLogBuffer);
@@ -297,7 +307,12 @@ begin
     finally
       TMonitor.Exit(TDXLogger.Instance);
     end;
-    if FTempBuffer.Count > 0 then
+
+    if FTempBuffer.Count = 0 then
+    begin
+      LBufferEmpty := true;
+    end
+    else
     begin
       // From here FTempBuffer will only be used in this LogThread
       // Log to console (iOS: NSLog, Windows: OutputDebugString)
@@ -333,15 +348,13 @@ procedure TLogThread.UpdateLogFile;
 var
   F: TextFile;
   s: string;
-  LFileName: string;
 {$ENDIF}
 begin
-{$IF (defined(MSWindows) or defined(MacOS)) and not (defined(IOS))) }
+{$IF (defined(MSWindows) or defined(LINUX) or defined(MacOS)) and not (defined(IOS))) }
   try
-    LFileName := ParamStr(0) + '.log';
-    AssignFile(F, LFileName);
+    AssignFile(F, FLogFileName);
     try
-      if FileExists(LFileName) then
+      if FileExists(FLogFileName) then
         Append(F)
       else
         Rewrite(F);
