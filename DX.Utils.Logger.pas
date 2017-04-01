@@ -113,16 +113,17 @@ uses
 type
   TLogThread = class(TThread)
   private
+    FTempBuffer: TStrings; // Used to decouple the main buffer
+    FExternalBuffer: TStrings; // Used as a separate buffer for writing to the external strings
     procedure UpdateConsole;
     procedure UpdateLogFile;
     procedure UpdateExternalStrings;
-  public
-    FTempBuffer: TStrings; // Used to decouple the main buffer
-    FExternalBuffer: TStrings; // Used as a separate buffer for writing to the external strings
-    constructor Create;
-    destructor Destroy; override;
+  protected
     procedure Execute; override;
     procedure SyncronizeExternalStrings;
+  public
+    constructor Create;
+    destructor Destroy; override;
   end;
 
 procedure Log(const AMessage: string);
@@ -280,9 +281,14 @@ procedure TLogThread.Execute;
 begin
   while not terminated do
   begin
+    // We don't want to check more frequently than 100 ms, as this would possibly
+    // generate way to frequent writes to the log file. If one log message comes in, then
+    // an other one might follow within a few ms. We write them in "100ms" blocks, not
+    // message by message.
     sleep(100);
     TMonitor.Enter(TDXLogger.Instance);
     try
+      //Copy everything from LogBuffer as fast as possible - to block as little as possible.
       if (TDXLogger.Instance.FLogBuffer.Count > 0) then
       begin
         FTempBuffer.AddStrings(TDXLogger.Instance.FLogBuffer);
