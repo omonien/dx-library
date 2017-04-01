@@ -51,7 +51,7 @@ type
     class function GetDateFormat: string; static;
     class procedure SetExternalStrings(AStrings: TStrings); static;
     class procedure SetExternalStringsAppendOnTop(const Value: Boolean); static;
-    class procedure SetDateFormat(ADateFormat: string); static;
+    class procedure SetDateFormat(const ADateFormat: string); static;
     function ExternalStringsAssigned: Boolean;
   public
     class constructor Create;
@@ -229,7 +229,7 @@ begin
   end;
 end;
 
-class procedure TDXLogger.SetDateFormat(ADateFormat: string);
+class procedure TDXLogger.SetDateFormat(const ADateFormat: string);
 begin
   TMonitor.Enter(FInstance);
   try
