@@ -46,16 +46,18 @@ type
     FLogBuffer: TStrings;
     FThread: TThread;
     FDateFormat: string;
-    class function Lock: TObject; static;
   protected
     constructor Create;
-    destructor Destroy; reintroduce;
     class function GetDateFormat: string; static;
     class procedure SetExternalStrings(AStrings: TStrings); static;
     class procedure SetExternalStringsAppendOnTop(const Value: Boolean); static;
     class procedure SetDateFormat(ADateFormat: string); static;
     function ExternalStringsAssigned: Boolean;
   public
+    class constructor Create;
+    class destructor Destroy;
+    destructor Destroy; override;
+
     /// <summary>
     /// External Strings can be used to log to a TMemo. Updates are done via Synchronize/Main Thread
     /// </summary>
@@ -94,18 +96,21 @@ implementation
 {$IFDEF MSWINDOWS}
 
 uses
-  Windows,
-  Messages, System.IOUtils;
+  WinAPI.Windows,
+  WinAPI.Messages,
+  System.IOUtils;
 {$ENDIF}
 {$IF defined(IOS) or Defined(MACOS)}
 
 uses
-  DX.Apple.Utils;
+  DX.Apple.Utils,
+  System.IOUtils;
 {$ENDIF}
 {$IFDEF Android}
 
 uses
-  AndroidAPI.Log;
+  AndroidAPI.Log,
+  System.IOUtils;
 {$ENDIF}
 
 type
@@ -121,15 +126,13 @@ type
     procedure UpdateConsole;
     procedure UpdateLogFile;
     procedure UpdateExternalStrings;
+  protected
+    procedure Execute; override;
+    procedure SyncronizeExternalStrings;
   public
     constructor Create;
     destructor Destroy; override;
-    procedure Execute; override;
-    procedure SyncronizeExternalStrings;
   end;
-
-var
-  FLock: TDXLogger;
 
 procedure Log(const AMessage: string);
 begin
@@ -169,38 +172,40 @@ begin
   inherited;
 end;
 
+class destructor TDXLogger.Destroy;
+begin
+  FTerminating := true;
+  FreeAndNil(FInstance);
+  inherited;
+end;
+
 function TDXLogger.ExternalStringsAssigned: Boolean;
 begin
-  TMonitor.Enter(Lock);
+  TMonitor.Enter(FInstance);
   try
     result := Assigned(FExternalStrings);
   finally
-    TMonitor.Exit(Lock);
+    TMonitor.Exit(FInstance);
   end;
 end;
 
 class function TDXLogger.GetDateFormat: string;
 begin
-  TMonitor.Enter(Lock);
+  TMonitor.Enter(FInstance);
   try
     result := Instance.FDateFormat;
   finally
-    TMonitor.Exit(Lock);
+    TMonitor.Exit(FInstance);
   end;
 end;
 
 class function TDXLogger.Instance: TDXLogger;
 begin
   if FTerminating then
-    raise EAbort.Create('Terminating');
+    raise EAbort.Create('Logger terminating');
   if FInstance = nil then
-    TDXLogger.FInstance := TDXLogger.Create;
+    raise EAbort.Create('Logger not initialized');
   result := FInstance;
-end;
-
-class function TDXLogger.Lock: TObject;
-begin
-  result := FLock;
 end;
 
 class procedure TDXLogger.Log(const AFormatString: string; const AValues: array of const);
@@ -215,44 +220,50 @@ begin
   LMessage := FormatDateTime(DateFormat, now) + ' : ' + AMessage;
   if Assigned(Instance.FLogBuffer) then
   begin
-    TMonitor.Enter(Lock);
+    TMonitor.Enter(FInstance);
     try
       Instance.FLogBuffer.Add(LMessage);
     finally
-      TMonitor.Exit(Lock);
+      TMonitor.Exit(FInstance);
     end;
   end;
 end;
 
 class procedure TDXLogger.SetDateFormat(ADateFormat: string);
 begin
-  TMonitor.Enter(Lock);
+  TMonitor.Enter(FInstance);
   try
     Instance.FDateFormat := ADateFormat;
   finally
-    TMonitor.Exit(Lock);
+    TMonitor.Exit(FInstance);
   end;
 end;
 
 class procedure TDXLogger.SetExternalStrings(AStrings: TStrings);
 begin
-  TMonitor.Enter(Lock);
+  TMonitor.Enter(FInstance);
   try
     Instance.FExternalStrings := AStrings;
   finally
-    TMonitor.Exit(Lock);
+    TMonitor.Exit(FInstance);
   end;
 end;
 
 class procedure TDXLogger.SetExternalStringsAppendOnTop(const Value: Boolean);
 begin
-  TMonitor.Enter(Lock);
+  TMonitor.Enter(FInstance);
   try
     Instance.FExternalStringsOnTop := Value;
   finally
-    TMonitor.Exit(Lock);
+    TMonitor.Exit(FInstance);
   end;
 
+end;
+
+class constructor TDXLogger.Create;
+begin
+  inherited;
+  FInstance := TDXLogger.Create;
 end;
 
 { TLogThread }
