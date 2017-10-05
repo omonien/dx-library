@@ -1,18 +1,18 @@
 {$REGION 'Documentation'}
 /// <summary>
-///   This unit implements the Factory Pattern and uses the Singleton Pattern. <br /><br />
-///   To use the factory: <br /><list type="number">
-///     <item>
-///       Register classes using DXFactory.RegisterClassForInterface(TFoo,
-///       IFoo); <br />This should be done in the initialization part of
-///       the unit where TFoo is implemented. <br />TFoo has to implement
-///       IFoo, where IFoo should be defined in a separate interface unit.
-///     </item>
-///     <item>
-///       Create instances of classes using LFoo :=
-///       DXFactory.CreateNew&lt;IFoo&gt;;
-///     </item>
-///   </list>
+/// This unit implements the Factory Pattern and uses the Singleton Pattern. <br /><br />
+/// To use the factory: <br /><list type="number">
+/// <item>
+/// Register classes using DXFactory.RegisterClassForInterface(TFoo,
+/// IFoo); <br />This should be done in the initialization part of
+/// the unit where TFoo is implemented. <br />TFoo has to implement
+/// IFoo, where IFoo should be defined in a separate interface unit.
+/// </item>
+/// <item>
+/// Create instances of classes using LFoo :=
+/// DXFactory.CreateNew&lt;IFoo&gt;;
+/// </item>
+/// </list>
 /// </summary>
 /// <license>MIT</license>
 /// <copyright>www.developer-experts.net</copyright>
@@ -23,21 +23,21 @@ interface
 
 uses System.SysUtils, System.Classes, System.Generics.Collections, System.Rtti;
 
-
 type
-  {$REGION 'Documentation'}
+{$REGION 'Documentation'}
   /// <summary>
-  ///   Dictionary-based registry type to hold Interface/Class pairs
+  /// Dictionary-based registry type to hold Interface/Class pairs
   /// </summary>
-  {$ENDREGION}
+{$ENDREGION}
   TClassRegistry = TDictionary<TGUID, TClass>;
 
-  {$REGION 'Documentation'}
+{$REGION 'Documentation'}
   /// <summary>
-  ///   Factory class, available as singleton, to create instances of classes,
-  ///   that implement requested interfaces.
+  /// Factory class, available as singleton, to create instances of classes,
+  /// that implement requested interfaces.
   /// </summary>
-  {$ENDREGION}
+{$ENDREGION}
+
   TDXFactory = class(TObject)
   strict private
     FRegisteredClasses: TClassRegistry;
@@ -48,36 +48,47 @@ type
   private
     FRTTI: TRttiContext;
   public
-    {$REGION 'Documentation'}
+{$REGION 'Documentation'}
     /// <summary>
-    ///   Do not call the constructor manually. Use DXFactory or
-    ///   TDXFactory.Instance instead.
+    /// Do not call the constructor manually. Use DXFactory or
+    /// TDXFactory.Instance instead.
     /// </summary>
-    {$ENDREGION}
+{$ENDREGION}
     constructor Create;
     destructor Destroy; override;
-    function Instance: TDXFactory;
+    class function Instance: TDXFactory;
 
-    {$REGION 'Documentation'}
+{$REGION 'Documentation'}
     /// <summary>
-    ///   Creates a new instance of the class that has been registered for
-    ///   implementing I
+    /// Creates a new instance of the class that has been registered for
+    /// implementing I
     /// </summary>
-    {$ENDREGION}
-    function CreateNew<I: IInterface>: I;
-    {$REGION 'Documentation'}
+{$ENDREGION}
+    function CreateNew<I: IInterface>: I; overload;
+{$REGION 'Documentation'}
     /// <summary>
-    ///   Registers AClass
+    /// Creates a new instance of the class that has been registered for
+    /// implementing I.
+    /// If ASetOwner = true, then a constructor
+    /// with exactly one parameter is expected, which will be set to AOwner.
     /// </summary>
-    {$ENDREGION}
+{$ENDREGION}
+    function CreateNew<I: IInterface>(AOwner: TObject; ASetOwner: boolean = true): I; overload;
+
+{$REGION 'Documentation'}
+    /// <summary>
+    /// Registers AClass
+    /// </summary>
+{$ENDREGION}
     procedure RegisterClassForInterface(AClass: TClass; AInterface: TGUID);
   end;
 
 {$REGION 'Documentation'}
-/// <summary>
-///   Convenience access to the singleton instance of TDXFactory
-/// </summary>
+  /// <summary>
+  /// Convenience access to the singleton instance of TDXFactory
+  /// </summary>
 {$ENDREGION}
+
 function DXFactory: TDXFactory;
 
 implementation
@@ -106,6 +117,11 @@ begin
 end;
 
 function TDXFactory.CreateNew<I>: I;
+begin
+  result := CreateNew<I>(nil, false);
+end;
+
+function TDXFactory.CreateNew<I>(AOwner: TObject; ASetOwner: boolean = true): I;
 var
   LClass: TClass;
   LClassType: TRttiType;
@@ -113,18 +129,36 @@ var
   LInterfaceGUID: TGUID;
   LInterface: IInterface;
   LObject: TObject;
+  LConstructor: TRttiMethod;
+  LParameters: TArray<TRttiParameter>;
 begin
-  //T is an interface (ensured by its constraint), but we need its GUID
+  // T is an interface (ensured by its constraint), but we need its GUID
   LInterfaceGUID := GetTypeData(TypeInfo(I))^.Guid;
   if FRegisteredClasses.TryGetValue(LInterfaceGUID, LClass) then
   begin
     if supports(LClass, LInterfaceGUID) then
     begin
       LClassType := FRTTI.GetType(LClass);
-      //We call the classes standard constructor
-      //Todo: implement constructors with one or more parameters (e.g. TComponent(AOwner: TObject)
-      LInstance := LClassType.GetMethod('Create').Invoke(LClassType.AsInstance.MetaclassType, []);
-      //use "Supports()" to convert the instance into its interface I
+      // We call the class' standard constructor
+      LConstructor := LClassType.GetMethod('Create');
+      LParameters := LConstructor.GetParameters;
+      // Look for exactly one parmeter and treat it as "Owner"
+      if (ASetOwner) and (Length(LParameters) = 1) then
+      begin
+        LInstance := LConstructor.Invoke(LClassType.AsInstance.MetaclassType, [AOwner]);
+      end
+      else if (Length(LParameters) = 1) then
+      begin
+        LInstance := LConstructor.Invoke(LClassType.AsInstance.MetaclassType, [nil]);
+      end
+      else if Length(LParameters) = 0 then
+      begin
+        LInstance := LConstructor.Invoke(LClassType.AsInstance.MetaclassType, []);
+      end
+      else
+        raise Exception.Create('Invalid number of parameters for constructor of ' + LClass.ClassName);
+
+      // use "Supports()" to convert the instance into its interface I
       Supports(LInstance.AsObject, LInterfaceGUID, result);
     end
     else
@@ -149,7 +183,7 @@ begin
   inherited;
 end;
 
-function TDXFactory.Instance: TDXFactory;
+class function TDXFactory.Instance: TDXFactory;
 begin
   result := FInstance;
 end;
