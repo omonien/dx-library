@@ -166,7 +166,7 @@ begin
   end
   else
   begin
-    raise Exception.Create('No implementation for ' + GetTypeName(TypeInfo(I)) + '  found!');
+    raise Exception.Create('No implementation for interface "' + GetTypeName(TypeInfo(I)) + '" found!');
   end;
 end;
 
