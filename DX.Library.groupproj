@@ -1,0 +1,84 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{57CFEE77-4B18-492F-8F84-0202E647A031}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="Demos\Factory\FactoryDemo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Demos\Sort\SortDemo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Demos\Threads\ThreadDemo.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="CompileAll.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="Demos\UAC\UAC.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="FactoryDemo">
+        <MSBuild Projects="Demos\Factory\FactoryDemo.dproj"/>
+    </Target>
+    <Target Name="FactoryDemo:Clean">
+        <MSBuild Projects="Demos\Factory\FactoryDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="FactoryDemo:Make">
+        <MSBuild Projects="Demos\Factory\FactoryDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="SortDemo">
+        <MSBuild Projects="Demos\Sort\SortDemo.dproj"/>
+    </Target>
+    <Target Name="SortDemo:Clean">
+        <MSBuild Projects="Demos\Sort\SortDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="SortDemo:Make">
+        <MSBuild Projects="Demos\Sort\SortDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="ThreadDemo">
+        <MSBuild Projects="Demos\Threads\ThreadDemo.dproj"/>
+    </Target>
+    <Target Name="ThreadDemo:Clean">
+        <MSBuild Projects="Demos\Threads\ThreadDemo.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ThreadDemo:Make">
+        <MSBuild Projects="Demos\Threads\ThreadDemo.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="CompileAll">
+        <MSBuild Projects="CompileAll.dproj"/>
+    </Target>
+    <Target Name="CompileAll:Clean">
+        <MSBuild Projects="CompileAll.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="CompileAll:Make">
+        <MSBuild Projects="CompileAll.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="UAC">
+        <MSBuild Projects="Demos\UAC\UAC.dproj"/>
+    </Target>
+    <Target Name="UAC:Clean">
+        <MSBuild Projects="Demos\UAC\UAC.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="UAC:Make">
+        <MSBuild Projects="Demos\UAC\UAC.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="FactoryDemo;SortDemo;ThreadDemo;CompileAll;UAC"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="FactoryDemo:Clean;SortDemo:Clean;ThreadDemo:Clean;CompileAll:Clean;UAC:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="FactoryDemo:Make;SortDemo:Make;ThreadDemo:Make;CompileAll:Make;UAC:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

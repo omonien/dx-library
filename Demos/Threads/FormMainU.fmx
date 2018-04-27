@@ -1,0 +1,68 @@
+object Form39: TForm39
+  Left = 0
+  Top = 0
+  Caption = 'Form39'
+  ClientHeight = 164
+  ClientWidth = 659
+  FormFactor.Width = 320
+  FormFactor.Height = 480
+  FormFactor.Devices = [Desktop]
+  OnCreate = FormCreate
+  OnCloseQuery = FormCloseQuery
+  DesignerMasterStyle = 0
+  object Button1: TButton
+    Position.X = 16.000000000000000000
+    Position.Y = 81.000000000000000000
+    Size.Width = 137.000000000000000000
+    Size.Height = 22.000000000000000000
+    Size.PlatformDefault = False
+    TabOrder = 1
+    Text = 'Erzeuge Formulare'
+    OnClick = Button1Click
+  end
+  object EditNumberOfForms: TEdit
+    Touch.InteractiveGestures = [LongTap, DoubleTap]
+    TabOrder = 3
+    FilterChar = '0123456789'
+    Text = '100'
+    TextSettings.HorzAlign = Trailing
+    Position.X = 192.000000000000000000
+    Position.Y = 80.000000000000000000
+    OnChangeTracking = EditNumberOfFormsChangeTracking
+  end
+  object Label1: TLabel
+    Position.X = 16.000000000000000000
+    Position.Y = 24.000000000000000000
+    Text = 'Person'
+  end
+  object EditNachname: TEdit
+    Touch.InteractiveGestures = [LongTap, DoubleTap]
+    TabOrder = 5
+    Position.X = 192.000000000000000000
+    Position.Y = 24.000000000000000000
+    OnChangeTracking = EditNachnameChangeTracking
+  end
+  object Label2: TLabel
+    Position.X = 16.000000000000000000
+    Position.Y = 136.000000000000000000
+    Size.Width = 273.000000000000000000
+    Size.Height = 17.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'Label2'
+  end
+  object LabelTiming: TLabel
+    Position.X = 304.000000000000000000
+    Position.Y = 82.000000000000000000
+    Size.Width = 329.000000000000000000
+    Size.Height = 17.000000000000000000
+    Size.PlatformDefault = False
+    Text = 'Theoretische Benachrichtigungszeit: '
+  end
+  object Button2: TButton
+    Position.X = 544.000000000000000000
+    Position.Y = 24.000000000000000000
+    TabOrder = 7
+    Text = 'Button2'
+    OnClick = Button2Click
+  end
+end

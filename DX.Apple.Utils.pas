@@ -1,51 +1,19 @@
+{$REGION 'Documentation'}
 /// <summary>
-/// This unit provides helper functions for use under iOS and MacOSX.
+///   This unit provides helper functions for use under iOS and macOS.
 /// </summary>
 /// <remarks>
-/// <para>
-/// This library also imports certain classes or parts of them which are
-/// currently not available as imported by EMBT
-/// </para>
-/// <para>
-/// The code is intended to be used with Delphi XE4 only. Other versions
-/// may or may not work.
-/// </para>
-/// <para>
-/// There is a dependency to Apple.Utils.pas, which ships with XE4 and can
-/// usually be found here: C:\Users\Public\Documents\RAD
-/// Studio\11.0\Samples\Delphi\RTL\CrossPlatform Utils
-/// </para>
-/// <para>
-/// Make sure use the most recent version - that samples folder above is
-/// connected to an SVN repository of Embarcaderos'.
-/// </para>
-/// <para>
-/// This library is licensed under the terms of The MIT License
-/// </para>
-/// <para>
-/// Copyright (c) 2013 Developer Experts, LLC
-/// </para>
-/// <para>
-/// <see href="http://www.developer-experts.net">www.developer-experts.net</see>
-/// </para>
-/// <para>
-/// Permission is hereby granted, free of charge, to any person obtaining a
-/// copy of this software and associated documentation files (the
-/// "Software"), to deal in the Software without restriction, including
-/// without limitation the rights to use, copy, modify, merge, publish,
-/// distribute, sublicense, and/or sell copies of the Software, and to
-/// permit persons to whom the Software is furnished to do so, subject to
-/// the following conditions: The above copyright notice and this
-/// permission notice shall be included in all copies or substantial
-/// portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT
-/// WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO
-/// THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-/// NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-/// LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-/// OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-/// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-/// </para>
+///   <para>
+///     There is a dependency to Apple.Utils.pas, which ships with XE4 and
+///     can usually be found here: C:\Users\Public\Documents\RAD
+///     Studio\11.0\Samples\Delphi\RTL\CrossPlatform Utils
+///   </para>
+///   <para>
+///     Make sure use the most recent version - that samples folder above is
+///     connected to an SVN repository of Embarcadero's.
+///   </para>
 /// </remarks>
+{$ENDREGION}
 unit DX.Apple.Utils;
 
 interface
