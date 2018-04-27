@@ -35,7 +35,7 @@ end;
 {$IFDEF POSIX}
 {$IFDEF MACOS}
 begin
-  Result := Tpath.GetDirectoryName(NSStrToStr( TNSBundle.Wrap(TNSBundle.OCClass.mainBundle).bundlePath));
+  Result := TPath.GetDirectoryName(NSStrToStr(TNSBundle.Wrap(TNSBundle.OCClass.mainBundle).bundlePath));
 end;
 {$ENDIF MACOS}
 {$IFDEF ANDROID}
