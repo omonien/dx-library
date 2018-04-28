@@ -1,15 +1,15 @@
 ﻿{$REGION 'Documentation'}
 /// <summary>
-///   This unit implements UAC/Elevation support for Windows.
+/// This unit implements UAC/Elevation support for Windows.
 /// </summary>
 /// <remarks>
-///   <para>
-///     Credits: Alex
-///   </para>
-///   <para>
+/// <para>
+/// Credits: Alex
+/// </para>
+/// <para>
 
-///     https://stackoverflow.com/questions/923350/delphi-prompt-for-uac-elevation-when-needed?utm_medium=organic&amp;utm_source=google_rich_qa&amp;utm_campaign=google_rich_qa
-///   </para>
+/// https://stackoverflow.com/questions/923350/delphi-prompt-for-uac-elevation-when-needed?utm_medium=organic&amp;utm_source=google_rich_qa&amp;utm_campaign=google_rich_qa
+/// </para>
 /// </remarks>
 {$ENDREGION}
 unit DX.Windows.UAC;
@@ -20,34 +20,33 @@ unit DX.Windows.UAC;
 interface
 
 uses
-  Windows;
+  Windows, Vcl.StdCtrls, System.SysUtils;
 
 type
-  TElevatedProc = function(const AParameters: String): Cardinal;
+  TElevatedProc = TFunc<string, Cardinal>;
   TProcessMessagesMeth = procedure of object;
 
 var
 
-  {$REGION 'Documentation'}
+{$REGION 'Documentation'}
   /// <summary>
-  ///   Warning: this function will be executed in external process. <br />Do
-  ///   not use any global variables inside this routine! <br />Use only
-  ///   supplied AParameters.
+  /// Warning: this function will be executed in external process. <br />Do
+  /// not use any global variables inside this routine! <br />Use only
+  /// supplied AParameters.
   /// </summary>
-  {$ENDREGION}
+{$ENDREGION}
   OnElevateProc: TElevatedProc;
 
 {$REGION 'Documentation'}
-/// <summary>
-///   Call this routine after you have assigned OnElevateProc
-/// </summary>
+  /// <summary>
+  /// Call this routine after you have assigned OnElevateProc
+  /// </summary>
 {$ENDREGION}
 procedure CheckForElevatedTask;
 
-
 {$REGION 'Documentation'}
 /// <summary>
-///   Runs OnElevateProc under full administrator rights
+/// Runs OnElevateProc under full administrator rights
 /// </summary>
 {$ENDREGION}
 function RunElevated(const AParameters: String; const AWnd: HWND = 0; const AProcessMessages: TProcessMessagesMeth = nil): Cardinal; overload;
@@ -56,17 +55,19 @@ function IsAdministrator: Boolean;
 function IsAdministratorAccount: Boolean;
 function IsUACEnabled: Boolean;
 function IsElevated: Boolean;
-procedure SetButtonElevated(const AButtonHandle: THandle);
+procedure SetButtonElevated(const AButtonHandle: THandle); overload;
+procedure SetButtonElevated(AButton: TCustomButton); overload;
 
 implementation
 
 uses
-  SysUtils, Registry, ShellAPI, ComObj;
+   Registry, ShellAPI, ComObj, Vcl.Forms;
 
 const
   RunElevatedTaskSwitch = '0CC5C50CB7D643B68CB900BF000FFFD5'; // some unique value, just a GUID with removed '[', ']', and '-'
 
 function CheckTokenMembership(TokenHandle: THandle; SidToCheck: Pointer; var IsMember: BOOL): BOOL; stdcall; external advapi32 name 'CheckTokenMembership';
+
 
 function RunElevated(const AParameters: String; const AWnd: HWND = 0; const AProcessMessages: TProcessMessagesMeth = nil): Cardinal; overload;
 var
@@ -264,6 +265,11 @@ begin
   end
   else
     Result := IsAdministrator;
+end;
+
+procedure SetButtonElevated(AButton: TCustomButton); overload;
+begin
+  SetButtonElevated(AButton.Handle);
 end;
 
 procedure SetButtonElevated(const AButtonHandle: THandle);
