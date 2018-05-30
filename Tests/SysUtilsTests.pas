@@ -1,4 +1,4 @@
-unit SysUtilsTests;
+﻿unit SysUtilsTests;
 
 interface
 
@@ -11,6 +11,10 @@ type
   THashTests = class(TObject)
   private
     FInputString: string;
+    FName: string;
+    procedure SetName(const Value: string);
+    function GetName: string;
+  protected
   public
     [Setup]
     procedure Setup;
@@ -22,20 +26,31 @@ type
     procedure TestSHA1;
     [Test]
     procedure TestSHA256;
-    [Test]
-    procedure TestSHA512;
-
     // Test with TestCase Attribute to supply parameters.
     // [Test]
     // [TestCase('TestA','1,2')]
     // [TestCase('TestB','3,4')]
     procedure Test2(const AValue1: Integer; const AValue2: Integer);
+    [Test]
+    procedure TestSHA512;
+
+    property LastName:string read GetName write SetName;
   end;
 
 implementation
 
 uses
   DX.SysUtils, System.SysUtils;
+
+function THashTests.GetName: string;
+begin
+
+end;
+
+procedure THashTests.SetName(const Value: string);
+begin
+  FName := Value;
+end;
 
 procedure THashTests.Setup;
 begin
