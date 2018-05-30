@@ -1,30 +1,34 @@
 {$REGION 'Documentation'}
 /// <summary>
-///   This unit provides helper functions for use under iOS and macOS.
+/// This unit provides helper functions for use under iOS and macOS.
 /// </summary>
 /// <remarks>
-///   <para>
-///     There is a dependency to Apple.Utils.pas, which ships with XE4 and
-///     can usually be found here: C:\Users\Public\Documents\RAD
-///     Studio\11.0\Samples\Delphi\RTL\CrossPlatform Utils
-///   </para>
-///   <para>
-///     Make sure use the most recent version - that samples folder above is
-///     connected to an SVN repository of Embarcadero's.
-///   </para>
+/// <para>
+/// There is a dependency to Apple.Utils.pas, which ships with XE4 and
+/// can usually be found here: C:\Users\Public\Documents\RAD
+/// Studio\11.0\Samples\Delphi\RTL\CrossPlatform Utils
+/// </para>
+/// <para>
+/// Make sure use the most recent version - that samples folder above is
+/// connected to an SVN repository of Embarcadero's.
+/// </para>
 /// </remarks>
 {$ENDREGION}
 unit DX.Apple.Utils;
+{$IF Defined(IOS) or Defined(MACOS)}
+{$DEFINE APPLE}
+{$ENDIF}
 
 interface
 
-uses
-  System.SysUtils,
 {$IF Defined(IOS)}
+uses
   iOSApi.Foundation;
 {$ELSEIF Defined(MACOS)}
-Macapi.Foundation;
+uses
+  Macapi.Foundation;
 {$ENDIF}
+
 /// <summary>
 /// Logs to the console
 /// </summary>
@@ -42,6 +46,7 @@ Macapi.Foundation;
 /// Mac / iOS Simulator: Mac - Console
 /// </para>
 /// </remarks>
+{$IF Defined(Apple)}
 procedure NSLog2(const AMessage: string; AAddTimeStamp: boolean = false);
 
 /// <summary>
@@ -52,7 +57,9 @@ procedure RaiseOnNSError(ANSError: Pointer);
 /// <summary>
 /// Performs the magic to cast an NSObject to an iOS/Mac pointer, as required by some Cocoa functions
 /// </summary>
+
 function NSObjectToPointer(AObject: NSObject): Pointer;
+{$ENDIF Apple}
 
 {$IFDEF IOS}
 /// <summary>
@@ -78,7 +85,7 @@ procedure ExcludeFromBackup(const APath: string);
 implementation
 
 uses
-{$IF Defined(IOS) or Defined(MACOS)}
+{$IF Defined(Apple)}
   Macapi.ObjectiveC,
   Macapi.Helpers,
 {$ENDIF}
@@ -86,11 +93,11 @@ uses
   iOSApi.UIKit,
   iOSApi.QuartzCore,
   iOSApi.CocoaTypes,
-  FMX.Helpers.iOS
+  FMX.Helpers.iOS,
 {$ELSEIF Defined(MACOS)}
-  Macapi.ObjCRuntime
+  Macapi.ObjCRuntime,
 {$ENDIF}
-    ;
+  System.SysUtils;
 
 type
   /// <summary>
@@ -148,6 +155,7 @@ procedure NSLog(format: PNSString); cdecl; varargs; external libFoundation name 
 {$ENDIF MACOS}
 {$ENDIF IOS}
 
+{$IF Defined(Apple)}
 function NSObjectToPointer(AObject: NSObject): Pointer;
 begin
   Result := (AObject as ILocalObject).GetObjectID;
@@ -179,6 +187,7 @@ begin
     raise ENSError.Create(LMsg);
   end;
 end;
+{$ENDIF Apple}
 
 {$IFDEF IOS}
 
@@ -194,8 +203,7 @@ begin
     Url := TNSURL.Wrap(TNSURL.OCClass.fileURLWithPath(StrToNSStr(APath)));
 
     // https://developer.apple.com/library/ios/qa/qa1719/_index.html
-    if not Url.setResourceValue(id(TNSNumber.OCClass.numberWithBool(True)),
-      CocoaNSStringConst(libFoundation, 'NSURLIsExcludedFromBackupKey'), @LNSError) then
+    if not Url.setResourceValue(id(TNSNumber.OCClass.numberWithBool(True)), CocoaNSStringConst(libFoundation, 'NSURLIsExcludedFromBackupKey'), @LNSError) then
       RaiseOnNSError(LNSError);
   end;
 end;
