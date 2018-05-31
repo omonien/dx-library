@@ -11,7 +11,9 @@ uses
   DUnitX.Loggers.Console,
   DUnitX.Loggers.Xml.NUnit,
   DUnitX.TestFramework,
-  SysUtilsTests in 'SysUtilsTests.pas';
+  SysUtilsTests in 'SysUtilsTests.pas',
+  ConfigJsonTests in 'ConfigJsonTests.pas',
+  DX.Settings.Json in '..\DX.Settings.Json.pas';
 
 var
   runner : ITestRunner;
