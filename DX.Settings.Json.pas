@@ -20,8 +20,9 @@ type
     function Format: TSettingsFormat;
     function Filename: string;
     procedure Write(const ASection: string; const AName: string; AVAlue: string); overload;
-    function Read(const ASection, AName: string; const ADefault: string): string; overload;
     procedure Write(const ASection: string; const AName: string; AVAlue: TObject); overload;
+
+    function Read(const ASection, AName: string; const ADefault: string): string; overload;
     function Read(const ASection, AName: string; AClass: TClass): TObject; overload;
 
   end;
@@ -107,6 +108,7 @@ begin
   begin
     TJson.JsonToObject(result, LValue as TJsonObject);
   end;
+  SaveConfig;
 end;
 
 procedure TConfigFile.SaveConfig;
