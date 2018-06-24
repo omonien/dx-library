@@ -41,6 +41,7 @@ end;
 
 destructor TConfigFile.Destroy;
 begin
+  FreeAndNil(FConfig);
   inherited;
 end;
 
@@ -56,6 +57,7 @@ end;
 
 procedure TConfigFile.LoadConfig;
 begin
+  FreeAndNil(FConfig);
   if FileExists(Filename) then
   begin
     try
