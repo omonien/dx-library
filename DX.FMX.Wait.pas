@@ -57,6 +57,7 @@ type
   public
     class procedure Start(AMessage: string; ADimBackground: Boolean = False);
     class procedure Stop;
+    class procedure EnableNetworkActivityIndicator(AEnable: Boolean);
     property Message: string read GetMessage write SetMessage;
     property Dim: Boolean read FDim write SetDim;
   end;
@@ -64,7 +65,7 @@ type
 implementation
 
 uses
-  System.IOUtils, System.UIConsts, DX.CrossPlatform;
+  System.IOUtils, System.UIConsts, DX.CrossPlatform, iOSapi.Helpers;
 {$R wheel.res}
 
 var
@@ -76,7 +77,7 @@ var
   LColor: TAlphaColorRec;
 begin
   inherited;
-  FPopup := TCustomPopupForm.Create(nil, nil, nil);
+  FPopup := TCustomPopupForm.Create(Application, nil, nil, False);
   with FPopup do
   begin
     // Little inconsistency in FMX: A TCustomPopupForm's size is NOT defined by width and height!
@@ -189,6 +190,13 @@ begin
   FreeAndNil(FWheelBitmap);
   FreeAndNil(FPopup);
   inherited;
+end;
+
+class procedure TWait.EnableNetworkActivityIndicator(AEnable: Boolean);
+begin
+{$IFDEF IOS}
+  TiOSHelper.SharedApplication.setNetworkActivityIndicatorVisible(AEnable);
+{$ENDIF}
 end;
 
 function TWait.GetMessage: string;

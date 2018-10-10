@@ -1,4 +1,4 @@
-unit DX.Generics.Threading.Tests.List;
+unit DX.Generics.ThreadSafe.Tests.List;
 {
 
   Cas de test DUnit Delphi
@@ -16,7 +16,7 @@ uses
   System.Generics.Defaults, System.Generics.Collections,
   System.Threading,
   TestFramework,
-  DX.Generics.Threading, DX.Generics.Threading.Tests;
+  DX.Generics.ThreadSafe, DX.Generics.ThreadSafe.Tests;
 
 type
   // Méthodes de test pour la classe TThreadObjectList

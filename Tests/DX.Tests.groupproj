@@ -1,0 +1,48 @@
+﻿<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+    <PropertyGroup>
+        <ProjectGuid>{E03397F1-6014-4A64-945E-3ADD6D2D0940}</ProjectGuid>
+    </PropertyGroup>
+    <ItemGroup>
+        <Projects Include="..\ThreadClasses\ThreadClassesTests.dproj">
+            <Dependencies/>
+        </Projects>
+        <Projects Include="DX.Generics.dproj">
+            <Dependencies/>
+        </Projects>
+    </ItemGroup>
+    <ProjectExtensions>
+        <Borland.Personality>Default.Personality.12</Borland.Personality>
+        <Borland.ProjectType/>
+        <BorlandProject>
+            <Default.Personality/>
+        </BorlandProject>
+    </ProjectExtensions>
+    <Target Name="ThreadClassesTests">
+        <MSBuild Projects="..\ThreadClasses\ThreadClassesTests.dproj"/>
+    </Target>
+    <Target Name="ThreadClassesTests:Clean">
+        <MSBuild Projects="..\ThreadClasses\ThreadClassesTests.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="ThreadClassesTests:Make">
+        <MSBuild Projects="..\ThreadClasses\ThreadClassesTests.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="DX_Generics">
+        <MSBuild Projects="DX.Generics.dproj"/>
+    </Target>
+    <Target Name="DX_Generics:Clean">
+        <MSBuild Projects="DX.Generics.dproj" Targets="Clean"/>
+    </Target>
+    <Target Name="DX_Generics:Make">
+        <MSBuild Projects="DX.Generics.dproj" Targets="Make"/>
+    </Target>
+    <Target Name="Build">
+        <CallTarget Targets="ThreadClassesTests;DX_Generics"/>
+    </Target>
+    <Target Name="Clean">
+        <CallTarget Targets="ThreadClassesTests:Clean;DX_Generics:Clean"/>
+    </Target>
+    <Target Name="Make">
+        <CallTarget Targets="ThreadClassesTests:Make;DX_Generics:Make"/>
+    </Target>
+    <Import Project="$(BDS)\Bin\CodeGear.Group.Targets" Condition="Exists('$(BDS)\Bin\CodeGear.Group.Targets')"/>
+</Project>

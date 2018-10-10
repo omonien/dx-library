@@ -1,4 +1,4 @@
-unit DX.Generics.Threading;
+unit DX.Generics.ThreadSafe;
 
 interface
 

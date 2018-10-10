@@ -1,4 +1,4 @@
-unit DX.Generics.Threading.Tests.ObjectDictionary;
+unit DX.Generics.ThreadSafe.Tests.ObjectDictionary;
 {
 
   Cas de test DUnit Delphi
@@ -15,7 +15,7 @@ uses
   System.Classes, System.SysUtils, System.RTLConsts, System.Types,
   TestFramework,
   System.Generics.Defaults, System.Generics.Collections, System.Threading,
-  DX.Generics.Threading, DX.Generics.Threading.Tests;
+  DX.Generics.ThreadSafe, DX.Generics.ThreadSafe.Tests;
 
 type
   // Méthodes de test pour la classe TThreadDictionary

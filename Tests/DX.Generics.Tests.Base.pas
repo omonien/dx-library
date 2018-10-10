@@ -1,13 +1,14 @@
-unit DX.Generics.Threading.Tests;
+unit DX.Generics.Tests.Base;
 
 interface
 
 uses
   System.Classes, System.SysUtils,
   System.Threading,
-  TestFramework;
+  DUnitX.TestFramework;
 
 type
+
   TFoo = class(TObject)
   private
     FName: string;
@@ -15,28 +16,28 @@ type
     property Name: string read FName write FName;
   end;
 
-  TThreadTestCase = class(TTestCase)
+  TThreadSafeTestBase = class abstract(TObject)
   strict protected
     FTasks: TArray<ITask>;
   public
-    procedure SetUp; override;
-    procedure TearDown; override;
+    procedure Setup; virtual;
+    procedure TearDown; virtual;
   end;
 
 implementation
 
-{ TThreadTestCase }
-
-procedure TThreadTestCase.SetUp;
+procedure TThreadSafeTestBase.Setup;
 begin
-  inherited;
   SetLength(FTasks, 0);
 end;
 
-procedure TThreadTestCase.TearDown;
+procedure TThreadSafeTestBase.TearDown;
 begin
   SetLength(FTasks, 0);
-  inherited;
 end;
+
+initialization
+
+TDUnitX.RegisterTestFixture(TThreadSafeTestBase);
 
 end.
