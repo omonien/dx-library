@@ -31,11 +31,14 @@ uses
   System.Classes, System.SysUtils;
 
 type
+  TShowExceptionProc = procedure(E: Exception) of Object;
+
 {$REGION 'Documentation'}
   /// <summary>
   /// TDXLogger provides a thread-safe logging mechanism.
   /// </summary>
 {$ENDREGION}
+
   TDXLogger = class(TObject)
   private
     class var FInstance: TDXLogger;
@@ -46,6 +49,7 @@ type
     FLogBuffer: TStrings;
     FThread: TThread;
     FDateFormat: string;
+    FShowException: TShowExceptionProc;
   protected
     constructor Create;
     class function GetDateFormat: string; static;
@@ -53,6 +57,7 @@ type
     class procedure SetExternalStringsAppendOnTop(const Value: Boolean); static;
     class procedure SetDateFormat(const ADateFormat: string); static;
     function ExternalStringsAssigned: Boolean;
+    procedure SetShowException(const Value: TShowExceptionProc);
   public
     class constructor Create;
     class destructor Destroy;
@@ -74,6 +79,9 @@ type
     class procedure Log(const AMessage: string); overload;
     class procedure Log(const AFormatString: string; const AValues: array of const); overload;
     class function Instance: TDXLogger; static;
+
+    procedure ExceptionHandler(ASender: TObject; E: Exception);
+    property ShowExceptionProc: TShowExceptionProc read FShowException write SetShowException;
   end;
 
   /// <summary>
@@ -213,6 +221,18 @@ begin
   Log(Format(AFormatString, AValues));
 end;
 
+procedure TDXLogger.ExceptionHandler(ASender: TObject; E: Exception);
+begin
+  if E is EAssertionFailed then
+    Log('Assertion failed: ' + E.Message)
+  else
+    Log('Exception: ' + E.Message);
+  if Assigned(FShowException) then
+  begin
+    FShowException(E);
+  end;
+end;
+
 class procedure TDXLogger.Log(const AMessage: string);
 var
   LMessage: string;
@@ -258,6 +278,11 @@ begin
     TMonitor.Exit(FInstance);
   end;
 
+end;
+
+procedure TDXLogger.SetShowException(const Value: TShowExceptionProc);
+begin
+  FShowException := Value;
 end;
 
 class constructor TDXLogger.Create;
