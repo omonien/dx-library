@@ -61,13 +61,12 @@ procedure SetButtonElevated(AButton: TCustomButton); overload;
 implementation
 
 uses
-   Registry, ShellAPI, ComObj, Vcl.Forms;
+  Registry, ShellAPI, ComObj, Vcl.Forms;
 
 const
   RunElevatedTaskSwitch = '0CC5C50CB7D643B68CB900BF000FFFD5'; // some unique value, just a GUID with removed '[', ']', and '-'
 
 function CheckTokenMembership(TokenHandle: THandle; SidToCheck: Pointer; var IsMember: BOOL): BOOL; stdcall; external advapi32 name 'CheckTokenMembership';
-
 
 function RunElevated(const AParameters: String; const AWnd: HWND = 0; const AProcessMessages: TProcessMessagesMeth = nil): Cardinal; overload;
 var

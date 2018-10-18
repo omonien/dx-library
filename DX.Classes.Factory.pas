@@ -159,7 +159,7 @@ begin
         raise Exception.Create('Invalid number of parameters for constructor of ' + LClass.ClassName);
 
       // use "Supports()" to convert the instance into its interface I
-      Supports(LInstance.AsObject, LInterfaceGUID, result);
+      supports(LInstance.AsObject, LInterfaceGUID, result);
     end
     else
       raise Exception.Create(LClass.ClassName + ' does not implement ' + GetTypeName(TypeInfo(I)) + '!');

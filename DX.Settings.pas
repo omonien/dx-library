@@ -15,7 +15,7 @@ type
     procedure Write(const ASection: string; const AName: string; AVAlue: string); overload;
     function Read(const ASection, AName: string; const ADefault: string): string; overload;
     procedure Write(const ASection: string; const AName: string; AVAlue: TObject); overload;
-    function Read(const ASection, AName: string; AClass:TClass): TObject; overload;
+    function Read(const ASection, AName: string; AClass: TClass): TObject; overload;
 
   end;
 
@@ -27,10 +27,10 @@ type
     class destructor Destroy;
     class function ConfigFile: IConfigFile;
     class function Filename: string;
-    class procedure Write(const ASection: string; const AName: string; AVAlue: string);overload;
-    class function Read(const ASection, AName: string; const ADefault: string): string;overload;
-    class procedure Write<T:class>(const ASection: string; const AName: string; AVAlue: T); overload;
-    class function Read<T:class, constructor>(const ASection, AName: string): T; overload;
+    class procedure Write(const ASection: string; const AName: string; AVAlue: string); overload;
+    class function Read(const ASection, AName: string; const ADefault: string): string; overload;
+    class procedure Write<T: class>(const ASection: string; const AName: string; AVAlue: T); overload;
+    class function Read<T: class, constructor>(const ASection, AName: string): T; overload;
 
   end;
 

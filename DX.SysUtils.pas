@@ -7,15 +7,15 @@ uses
 
 type
 {$SCOPEDENUMS ON}
-  {$REGION 'Documentation'}
+{$REGION 'Documentation'}
   /// <summary>
-  ///   Implemented Hash algorithms.
+  /// Implemented Hash algorithms.
   /// </summary>
   /// <remarks>
-  ///   IMPORTANT: MD5 and SHA1 are both UNSAFE in terms of cryptography. Use
-  ///   for checksums etc only!
+  /// IMPORTANT: MD5 and SHA1 are both UNSAFE in terms of cryptography. Use
+  /// for checksums etc only!
   /// </remarks>
-  {$ENDREGION}
+{$ENDREGION}
   THashAlgorithm = (MD5, SHA1, SHA256, SHA512);
 {$SCOPEDENUMS OFF}
 
