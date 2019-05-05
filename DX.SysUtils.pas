@@ -81,70 +81,71 @@ begin
   // Async on iOS level
   TiOSHelper.SharedApplication.OpenURL(LUrl);
 {$ENDIF}
+end;
 
-  class function THash.Hash(const AStream: TStream; AAlgorithm: TAlgorithm): string;
-  var
-    LHash: TIdHash;
-  begin
-    LHash := nil;
-    try
-      case AAlgorithm of
-        TAlgorithm.MD5:
-          LHash := TIdHashMessageDigest5.Create;
-        TAlgorithm.SHA1:
-          LHash := TIdHashSHA1.Create;
-        TAlgorithm.SHA256:
-          LHash := TIdHashSHA256.Create;
-        TAlgorithm.SHA512:
-          LHash := TIdHashSHA512.Create;
-      end;
-      result := LHash.HashStreamAsHex(AStream);
-    finally
-      FreeAndNil(LHash);
+class function THash.Hash(const AStream: TStream; AAlgorithm: TAlgorithm): string;
+var
+  LHash: TIdHash;
+begin
+  LHash := nil;
+  try
+    case AAlgorithm of
+      TAlgorithm.MD5:
+        LHash := TIdHashMessageDigest5.Create;
+      TAlgorithm.SHA1:
+        LHash := TIdHashSHA1.Create;
+      TAlgorithm.SHA256:
+        LHash := TIdHashSHA256.Create;
+      TAlgorithm.SHA512:
+        LHash := TIdHashSHA512.Create;
     end;
-
+    result := LHash.HashStreamAsHex(AStream);
+  finally
+    FreeAndNil(LHash);
   end;
 
-  class function THash.Hash(const AValue: string; AAlgorithm: TAlgorithm): string;
-  var
-    LStream: TStringStream;
-  begin
-    LStream := TStringStream.Create(AValue);
-    try
+end;
+
+class function THash.Hash(const AValue: string; AAlgorithm: TAlgorithm): string;
+var
+  LStream: TStringStream;
+begin
+  LStream := TStringStream.Create(AValue);
+  try
+    result := Hash(LStream, AAlgorithm);
+  finally
+    FreeAndNil(LStream);
+  end;
+end;
+
+class function THash.HashForFile(const AFileName: string; AAlgorithm: TAlgorithm): string;
+var
+  LStream: TFileStream;
+begin
+  LStream := nil;
+  try
+    if FileExists(AFileName) then
+    begin
+      LStream := TFileStream.Create(AFileName, fmOpenRead OR fmShareDenyWrite);
       result := Hash(LStream, AAlgorithm);
-    finally
-      FreeAndNil(LStream);
+    end
+    else
+    begin
+      result := '';
     end;
+  finally
+    FreeAndNil(LStream);
   end;
+end;
 
-  class function THash.HashForFile(const AFileName: string; AAlgorithm: TAlgorithm): string;
-  var
-    LStream: TFileStream;
-  begin
-    LStream := nil;
-    try
-      if FileExists(AFileName) then
-      begin
-        LStream := TFileStream.Create(AFileName, fmOpenRead OR fmShareDenyWrite);
-        result := Hash(LStream, AAlgorithm);
-      end
-      else
-      begin
-        result := '';
-      end;
-    finally
-      FreeAndNil(LStream);
-    end;
-  end;
+class function THash.MD5ForFile(const AFileName: string): string;
+begin
+  result := HashForFile(AFileName, TAlgorithm.MD5);
+end;
 
-  class function THash.MD5ForFile(const AFileName: string): string;
-  begin
-    result := HashForFile(AFileName, TAlgorithm.MD5);
-  end;
-
-  class function THash.SHA1ForFile(const AFileName: string): string;
-  begin
-    result := HashForFile(AFileName, TAlgorithm.SHA1);
-  end;
+class function THash.SHA1ForFile(const AFileName: string): string;
+begin
+  result := HashForFile(AFileName, TAlgorithm.SHA1);
+end;
 
 end.

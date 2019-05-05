@@ -27,14 +27,13 @@ type
     procedure SetMessage(const Value: string);
   protected
     property ShowCount: Integer read FShowCount write FShowCount;
-  protected
-    class procedure EnableNetworkActivityIndicator(AEnable: Boolean);virtual;
   public
     constructor Create; reintroduce;
     destructor Destroy; override;
   public
     class procedure Start(const AMessage: string);
     class procedure Stop;
+    class procedure EnableNetworkActivityIndicator(AEnable: Boolean); virtual;
     class procedure ShowNetworkActivityIndicator;
     class procedure HideNetworkActivityIndicator;
     property Message: string read GetMessage write SetMessage;
