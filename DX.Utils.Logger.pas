@@ -1,7 +1,7 @@
-{$REGION 'Documentation'}
 /// <summary>
 /// DX.Utils.Logger provides an easy to use logging mechanism. The logging is
-/// completely multithreaded and will not change the timing of the application.
+/// completely multithreaded and will not change the timing of the
+/// application.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -11,18 +11,6 @@
 /// See:
 /// </para>
 /// </remarks>
-/// <example>
-/// <para>
-/// uses
-/// </para>
-/// <para>
-/// DX.Utils.Logger;
-/// </para>
-/// <para>
-/// Log('Some log message')
-/// </para>
-/// </example>
-{$ENDREGION}
 unit DX.Utils.Logger;
 
 interface
@@ -33,11 +21,9 @@ uses
 type
   TShowExceptionProc = procedure(E: Exception) of Object;
 
-{$REGION 'Documentation'}
   /// <summary>
   /// TDXLogger provides a thread-safe logging mechanism.
   /// </summary>
-{$ENDREGION}
 
   TDXLogger = class(TObject)
   private
@@ -434,7 +420,8 @@ procedure TLogThread.UpdateExternalStrings;
 var
   s: string;
 begin
-  if (TDXLogger.Instance <> nil) and Assigned(TDXLogger.Instance.FExternalStrings) and Assigned(FExternalBuffer) and not TDXLogger.FTerminating then
+  if (TDXLogger.Instance <> nil) and Assigned(TDXLogger.Instance.FExternalStrings) and Assigned(FExternalBuffer) and
+    not TDXLogger.FTerminating then
   begin
     try
       TMonitor.Enter(FExternalBuffer);

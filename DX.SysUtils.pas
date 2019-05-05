@@ -1,128 +1,150 @@
+/// <summary>
+/// DX.SysUtils provides several system level utility routines.
+/// </summary>
 unit DX.SysUtils;
 
 interface
 
+{$SCOPEDENUMS ON}
+
 uses
-  System.Classes, System.SysUtils;
+  System.Classes, System.SysUtils
+{$IFDEF IOS}
+    , Macapi.Helpers, iOSAPi.Helpers, iOSAPi.Foundation, iOSAPi.UIKit
+{$ENDIF}
+    ;
 
 type
-{$SCOPEDENUMS ON}
-{$REGION 'Documentation'}
   /// <summary>
-  /// Implemented Hash algorithms.
+  /// Offers various class functions for easy Hash generation. Based on Indy
+  /// implementations.
   /// </summary>
-  /// <remarks>
-  /// IMPORTANT: MD5 and SHA1 are both UNSAFE in terms of cryptography. Use
-  /// for checksums etc only!
-  /// </remarks>
-{$ENDREGION}
-  THashAlgorithm = (MD5, SHA1, SHA256, SHA512);
-{$SCOPEDENUMS OFF}
-
   THash = class(TObject)
-  protected
+  public type
+    /// <summary>
+    /// Available Hash algorithms.
+    /// </summary>
+    /// <remarks>
+    /// IMPORTANT: MD5 and SHA1 are both UNSAFE in terms of cryptography. Use
+    /// for checksums etc only!
+    /// </remarks>
+    TAlgorithm = (MD5, SHA1, SHA256, SHA512);
+
   public
-{$REGION 'Documentation'}
     /// <summary>
-    /// returns hash/checksum for a stream.
+    /// returns hash/checksum for a stream
     /// </summary>
-{$ENDREGION}
-    class function Hash(const AStream: TStream; AAlgorithm: THashAlgorithm): string; overload;
-{$REGION 'Documentation'}
+    class function Hash(const AStream: TStream; AAlgorithm: TAlgorithm): string; overload;
     /// <summary>
-    /// returns hash/checksum for a string.
+    /// Returns hash/checksum for a string
     /// </summary>
-{$ENDREGION}
-    class function Hash(const AValue: string; AAlgorithm: THashAlgorithm): string; overload;
-{$REGION 'Documentation'}
+    class function Hash(const AValue: string; AAlgorithm: TAlgorithm): string; overload;
     /// <summary>
-    /// returns hash/checksum for a file.
+    /// Returns hash/checksum for a file
     /// </summary>
-{$ENDREGION}
-    class function HashForFile(const AFileName: string; AAlgorithm: THashAlgorithm): string;
-{$REGION 'Documentation'}
+    class function HashForFile(const AFileName: string; AAlgorithm: TAlgorithm): string;
     /// <summary>
-    /// MD5 Hash for a file.
+    /// MD5 Hash for a file
     /// </summary>
-{$ENDREGION}
     class function MD5ForFile(const AFileName: string): string;
-{$REGION 'Documentation'}
     /// <summary>
-    /// SHA1 Hash for a file.
+    /// SHA1 Hash for a file
     /// </summary>
-{$ENDREGION}
     class function SHA1ForFile(const AFileName: string): string;
   end;
+
+  /// <summary>
+  /// Attempts to open the resource at the specified URL asynchronously ,
+  /// </summary>
+  /// <param name="AUrl">
+  /// A URL. Each platform may support many different common schemes, such as
+  /// http, https, tel, facetime, and mailto or custom app specific schemes.
+  /// </param>
+  /// <remarks>
+  /// Cuurently supports the iOS platform only.
+  /// </remarks>
+procedure OpenURL(const AUrl: string);
 
 implementation
 
 uses
   IdHash, IdHashMessageDigest, IdHashSHA;
 
-class function THash.Hash(const AStream: TStream; AAlgorithm: THashAlgorithm): string;
+procedure OpenURL(const AUrl: string);
+{$IFDEF IOS}
 var
-  LHash: TIdHash;
+  LUrl: NSURL;
+{$ENDIF}
 begin
-  LHash := nil;
-  try
-    case AAlgorithm of
-      THashAlgorithm.MD5:
-        LHash := TIdHashMessageDigest5.Create;
-      THashAlgorithm.SHA1:
-        LHash := TIdHashSHA1.Create;
-      THashAlgorithm.SHA256:
-        LHash := TIdHashSHA256.Create;
-      THashAlgorithm.SHA512:
-        LHash := TIdHashSHA512.Create;
+{$IFDEF IOS}
+  LUrl := StrToNSUrl(AUrl);
+  // Async on iOS level
+  TiOSHelper.SharedApplication.OpenURL(LUrl);
+{$ENDIF}
+
+  class function THash.Hash(const AStream: TStream; AAlgorithm: TAlgorithm): string;
+  var
+    LHash: TIdHash;
+  begin
+    LHash := nil;
+    try
+      case AAlgorithm of
+        TAlgorithm.MD5:
+          LHash := TIdHashMessageDigest5.Create;
+        TAlgorithm.SHA1:
+          LHash := TIdHashSHA1.Create;
+        TAlgorithm.SHA256:
+          LHash := TIdHashSHA256.Create;
+        TAlgorithm.SHA512:
+          LHash := TIdHashSHA512.Create;
+      end;
+      result := LHash.HashStreamAsHex(AStream);
+    finally
+      FreeAndNil(LHash);
     end;
-    result := LHash.HashStreamAsHex(AStream);
-  finally
-    FreeAndNil(LHash);
+
   end;
 
-end;
-
-class function THash.Hash(const AValue: string; AAlgorithm: THashAlgorithm): string;
-var
-  LStream: TStringStream;
-begin
-  LStream := TStringStream.Create(AValue);
-  try
-    result := Hash(LStream, AAlgorithm);
-  finally
-    FreeAndNil(LStream);
-  end;
-
-end;
-
-class function THash.HashForFile(const AFileName: string; AAlgorithm: THashAlgorithm): string;
-var
-  LStream: TFileStream;
-begin
-  LStream := nil;
-  try
-    if FileExists(AFileName) then
-    begin
-      LStream := TFileStream.Create(AFileName, fmOpenRead OR fmShareDenyWrite);
+  class function THash.Hash(const AValue: string; AAlgorithm: TAlgorithm): string;
+  var
+    LStream: TStringStream;
+  begin
+    LStream := TStringStream.Create(AValue);
+    try
       result := Hash(LStream, AAlgorithm);
-    end
-    else
-    begin
-      result := '';
+    finally
+      FreeAndNil(LStream);
     end;
-  finally
-    FreeAndNil(LStream);
   end;
-end;
 
-class function THash.MD5ForFile(const AFileName: string): string;
-begin
-  result := HashForFile(AFileName, THashAlgorithm.MD5);
-end;
+  class function THash.HashForFile(const AFileName: string; AAlgorithm: TAlgorithm): string;
+  var
+    LStream: TFileStream;
+  begin
+    LStream := nil;
+    try
+      if FileExists(AFileName) then
+      begin
+        LStream := TFileStream.Create(AFileName, fmOpenRead OR fmShareDenyWrite);
+        result := Hash(LStream, AAlgorithm);
+      end
+      else
+      begin
+        result := '';
+      end;
+    finally
+      FreeAndNil(LStream);
+    end;
+  end;
 
-class function THash.SHA1ForFile(const AFileName: string): string;
-begin
-  result := HashForFile(AFileName, THashAlgorithm.SHA1);
-end;
+  class function THash.MD5ForFile(const AFileName: string): string;
+  begin
+    result := HashForFile(AFileName, TAlgorithm.MD5);
+  end;
+
+  class function THash.SHA1ForFile(const AFileName: string): string;
+  begin
+    result := HashForFile(AFileName, TAlgorithm.SHA1);
+  end;
 
 end.
