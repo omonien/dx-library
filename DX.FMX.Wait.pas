@@ -13,13 +13,14 @@ uses
   FMX.Layouts, FMX.Ani, FMX.Objects;
 
 type
-  TWait = class(TCustomForm)
+  TWait = class(TPanel)
   private
     class var FInstance: TWait;
   private
     FLabelWait: TLabel;
     FRectWait: TRectangle;
     FShowCount: Integer;
+    FContainer: TLayout;
     FWheelAnimation: TBitmapListAnimation;
     FWheelBitmap: TBitmap;
     FWheelImage: TImage;
@@ -27,10 +28,8 @@ type
     procedure SetMessage(const Value: string);
   protected
     property ShowCount: Integer read FShowCount write FShowCount;
-    procedure PositionOnParent;
   public
     constructor Create; reintroduce;
-    destructor Destroy; override;
   public
     class procedure Start(const AMessage: string);
     class procedure Stop;
@@ -55,25 +54,34 @@ var
   LStream: TResourceStream;
   LActiveForm: TCommonCustomForm;
 begin
-  if not TPlatformServices.Current.SupportsPlatformService(IFMXWindowService, FWinService) then
-    raise EUnsupportedPlatformService.Create('IFMXWindowService');
   LActiveForm := Screen.ActiveForm;
   if not Assigned(LActiveForm) then
   begin
     LActiveForm := Application.MainForm;
   end;
-  inherited CreateNew(LActiveForm);
+
+  Inherited Create(LActiveForm);
   Parent := LActiveForm;
-  Position := TFormPosition.OwnerFormCenter;
-  PositionOnParent;
-  FormStyle := TFormStyle.StayOnTop;
+  Position.x := 0;
+  Position.y := 0;
+  Width := LActiveForm.Width;
+  Height := LActiveForm.Height;
+  //We are now on top of all other controls we blur the background
+  Opacity := 0.6;
 
-  Transparency := true;
+  //Create a Layout, which will be on top - and which won't inherit opacity
+  FContainer := TLayout.Create(self);
+  FContainer.Parent := LActiveForm;
+  FContainer.Position.X := 0;
+  FContainer.Position.Y := 0;
+  FContainer.Width := LActiveForm.Width;
+  FContainer.Height := LActiveForm.Height;
 
-  FRectWait := TRectangle.Create(self);
+
+  FRectWait := TRectangle.Create(Self);
   with FRectWait do
   begin
-    Parent := self;
+    Parent := FContainer;
     Align := TAlignLayout.Center;
     Height := 96.0;
     Width := 160.0;
@@ -81,7 +89,7 @@ begin
     Sides := [];
   end;
 
-  FLabelWait := TLabel.Create(self);
+  FLabelWait := TLabel.Create(Self);
   with FLabelWait do
   begin
     Parent := FRectWait;
@@ -98,20 +106,20 @@ begin
     Text := '';
   end;
 
-  FWheelImage := TImage.Create(self);
+  FWheelImage := TImage.Create(Self);
   with FWheelImage do
   begin
     Parent := FRectWait;
     Height := 38.0;
     Width := 38.0;
-    Position.X := 61.0;
+    Position.x := 61.0;
     Position.Y := 8.0;
   end;
 
   LStream := TResourceStream.Create(HInstance, 'WHEEL', RT_RCDATA);
   FWheelBitmap := TBitmap.CreateFromStream(LStream);
 
-  FWheelAnimation := TBitmapListAnimation.Create(self);
+  FWheelAnimation := TBitmapListAnimation.Create(Self);
   with FWheelAnimation do
   begin
     Parent := FWheelImage;
@@ -124,15 +132,6 @@ begin
   end;
 
   FShowCount := 0;
-end;
-
-destructor TWait.Destroy;
-begin
-  FreeAndNil(FLabelWait);
-  FreeAndNil(FWheelAnimation);
-  FreeAndNil(FWheelImage);
-  FreeAndNil(FWheelBitmap);
-  inherited;
 end;
 
 class procedure TWait.EnableNetworkActivityIndicator(AEnable: Boolean);
@@ -162,17 +161,6 @@ begin
   TWait.EnableNetworkActivityIndicator(false);
 end;
 
-procedure TWait.PositionOnParent;
-var
- LParent: TCommonCustomForm;
-begin
-  LParent := (Parent) as TCommonCustomForm;
-  Width := LParent.Width;
-  Height := LParent.Height;
-  Left := LParent.Left;
-  Top := LParent.Top;
-end;
-
 procedure TWait.SetMessage(const Value: string);
 begin
   FLabelWait.Text := Value;
@@ -187,7 +175,6 @@ begin
       begin
         FInstance := TWait.Create;
       end;
-      FInstance.PositionOnParent;
       FInstance.FWheelAnimation.Enabled := true;
       FInstance.ShowCount := FInstance.ShowCount + 1;
       FInstance.Message := AMessage;
@@ -211,7 +198,7 @@ begin
           FInstance.ShowCount := FInstance.ShowCount - 1;
           if FInstance.ShowCount = 0 then
           begin
-            FInstance.Close;
+            FInstance.Hide;
             FInstance.FWheelAnimation.Enabled := false;
             FInstance.DisposeOf;
             FInstance := nil;
