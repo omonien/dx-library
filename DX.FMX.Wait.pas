@@ -27,6 +27,7 @@ type
     procedure SetMessage(const Value: string);
   protected
     property ShowCount: Integer read FShowCount write FShowCount;
+    procedure PositionOnParent;
   public
     constructor Create; reintroduce;
     destructor Destroy; override;
@@ -52,18 +53,20 @@ uses
 constructor TWait.Create;
 var
   LStream: TResourceStream;
+  LActiveForm: TCommonCustomForm;
 begin
   if not TPlatformServices.Current.SupportsPlatformService(IFMXWindowService, FWinService) then
     raise EUnsupportedPlatformService.Create('IFMXWindowService');
-  inherited CreateNew(Screen.ActiveForm);
-  Parent := Screen.ActiveForm;
-  if Assigned(Screen.ActiveForm) then
+  LActiveForm := Screen.ActiveForm;
+  if not Assigned(LActiveForm) then
   begin
-    Width := Screen.ActiveForm.Width;
-    Height := Screen.ActiveForm.Height;
+    LActiveForm := Application.MainForm;
   end;
-  FormStyle := TFormStyle.Popup;
+  inherited CreateNew(LActiveForm);
+  Parent := LActiveForm;
   Position := TFormPosition.OwnerFormCenter;
+  PositionOnParent;
+  FormStyle := TFormStyle.StayOnTop;
 
   Transparency := true;
 
@@ -159,6 +162,17 @@ begin
   TWait.EnableNetworkActivityIndicator(false);
 end;
 
+procedure TWait.PositionOnParent;
+var
+ LParent: TCommonCustomForm;
+begin
+  LParent := (Parent) as TCommonCustomForm;
+  Width := LParent.Width;
+  Height := LParent.Height;
+  Left := LParent.Left;
+  Top := LParent.Top;
+end;
+
 procedure TWait.SetMessage(const Value: string);
 begin
   FLabelWait.Text := Value;
@@ -169,21 +183,17 @@ begin
   TThread.Synchronize(nil,
     procedure
     begin
-      if Assigned(FInstance) then
-      begin
-        FInstance.FLabelWait.Text := AMessage;
-      end
-      else
+      if not Assigned(FInstance) then
       begin
         FInstance := TWait.Create;
-        FInstance.FWheelAnimation.Enabled := true;
-        FInstance.ShowCount := FInstance.ShowCount + 1;
-        FInstance.Message := AMessage;
-        FInstance.Show;
       end;
+      FInstance.PositionOnParent;
+      FInstance.FWheelAnimation.Enabled := true;
+      FInstance.ShowCount := FInstance.ShowCount + 1;
+      FInstance.Message := AMessage;
+      FInstance.Show;
+
       // Make sure the dialog will be shown - even if the main thread will be busy afterwards
-      // Todo: In D10.2 Application.ProcessMessages works as expected for Desktop/Windows
-      // in D10.3 it will block for a certain time - which seems to be a problem with TAnimation (Wheel)
       Application.ProcessMessages;
     end);
 end;
