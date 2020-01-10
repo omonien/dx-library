@@ -1,4 +1,4 @@
-unit DX.Utils.Configuration;
+unit DX.Classes.Configuration;
 
 interface
 

@@ -1,4 +1,4 @@
-unit DX.Utils.Singleton;
+unit DX.Classes.Singleton;
 
 interface
 
