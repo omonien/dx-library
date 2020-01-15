@@ -4,7 +4,7 @@ interface
 
 uses
   System.Classes, System.SysUtils, System.IniFiles, System.Rtti, System.Generics.Collections,
-  DX.Utils.Singleton, DX.Classes.Strings;
+  DX.Classes.Singleton, DX.Classes.Strings;
 
 Type
 
