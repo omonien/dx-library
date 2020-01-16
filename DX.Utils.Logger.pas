@@ -35,7 +35,7 @@ type
     FLogBuffer: TStrings;
     FThread: TThread;
     FDateFormat: string;
-    FShowException: TShowExceptionProc;
+    FShowExceptionProc: TShowExceptionProc;
   protected
     constructor Create;
     class function GetDateFormat: string; static;
@@ -43,7 +43,7 @@ type
     class procedure SetExternalStringsAppendOnTop(const Value: Boolean); static;
     class procedure SetDateFormat(const ADateFormat: string); static;
     function ExternalStringsAssigned: Boolean;
-    procedure SetShowException(const Value: TShowExceptionProc);
+    procedure SetShowExceptionProc(const Value: TShowExceptionProc);
   public
     class constructor Create;
     class destructor Destroy;
@@ -63,11 +63,15 @@ type
     /// </summary>
     class property DateFormat: string read GetDateFormat write SetDateFormat;
     class procedure Log(const AMessage: string); overload;
-    class procedure Log(const AFormatString: string; const AValues: array of const); overload;
+    class procedure Log(
+      const AFormatString: string;
+      const AValues:       array of const); overload;
     class function Instance: TDXLogger; static;
 
-    procedure ExceptionHandler(ASender: TObject; E: Exception);
-    property ShowExceptionProc: TShowExceptionProc read FShowException write SetShowException;
+    procedure ExceptionHandler(
+      ASender: TObject;
+      E:       Exception);
+    property ShowExceptionProc: TShowExceptionProc read FShowExceptionProc write SetShowExceptionProc;
   end;
 
   /// <summary>
@@ -77,13 +81,17 @@ procedure Log(const AMessage: string); overload;
 /// <summary>
 /// Shortcut to log a message with format string
 /// </summary>
-procedure Log(const AFormatString: string; const AValues: array of const); overload;
+procedure Log(
+  const AFormatString: string;
+  const AValues:       array of const); overload;
 /// <summary>
 /// Shortcut to to avoid name clashes with other logging systems
 /// </summary>
 procedure DXLog(const AMessage: string); overload;
 /// Shortcut to to avoid name clashes with other logging systems
-procedure DXLog(const AFormatString: string; const AValues: array of const); overload;
+procedure DXLog(
+  const AFormatString: string;
+  const AValues:       array of const); overload;
 
 implementation
 
@@ -133,7 +141,9 @@ begin
   TDXLogger.Log(AMessage);
 end;
 
-procedure Log(const AFormatString: string; const AValues: array of const);
+procedure Log(
+  const AFormatString: string;
+  const AValues:       array of const);
 begin
   TDXLogger.Log(AFormatString, AValues);
 end;
@@ -143,7 +153,9 @@ begin
   Log(AMessage);
 end;
 
-procedure DXLog(const AFormatString: string; const AValues: array of const); overload;
+procedure DXLog(
+  const AFormatString: string;
+  const AValues:       array of const); overload;
 begin
   Log(AFormatString, AValues);
 end;
@@ -202,20 +214,34 @@ begin
   result := FInstance;
 end;
 
-class procedure TDXLogger.Log(const AFormatString: string; const AValues: array of const);
+class procedure TDXLogger.Log(
+  const AFormatString: string;
+  const AValues:       array of const);
 begin
   Log(Format(AFormatString, AValues));
 end;
 
-procedure TDXLogger.ExceptionHandler(ASender: TObject; E: Exception);
+procedure TDXLogger.ExceptionHandler(
+  ASender: TObject;
+  E:       Exception);
+var
+  LSender: string;
 begin
-  if E is EAssertionFailed then
-    Log('Assertion failed: ' + E.Message)
-  else
-    Log('Exception: ' + E.Message);
-  if Assigned(FShowException) then
+  if Assigned(ASender) then
   begin
-    FShowException(E);
+    LSender := ASender.ClassName;
+  end
+  else
+  begin
+    LSender := 'nil';
+  end;
+  if E is EAssertionFailed then
+    Log('Assertion failed: %s (Sender: %s)', [E.Message, LSender])
+  else
+    Log('Exception:  %s (Sender: %s)', [E.Message, LSender]);
+  if Assigned(FShowExceptionProc) then
+  begin
+    FShowExceptionProc(E);
   end;
 end;
 
@@ -266,9 +292,9 @@ begin
 
 end;
 
-procedure TDXLogger.SetShowException(const Value: TShowExceptionProc);
+procedure TDXLogger.SetShowExceptionProc(const Value: TShowExceptionProc);
 begin
-  FShowException := Value;
+  FShowExceptionProc := Value;
 end;
 
 class constructor TDXLogger.Create;
