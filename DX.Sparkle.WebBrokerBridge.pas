@@ -546,19 +546,11 @@ function TSparkleRequest.ReadClient(
 begin
   raise ENotImplemented.Create('Not implemented');
   // result := FRawContent.Read(Buffer, Count);
-  // well, it shouldn't be less than 0. but let's not take chances
-  if result < 0 then
-  begin
-    result := 0;
-  end;
 end;
 
 function TSparkleRequest.ReadString(Count: Integer): string;
-var
-  LBuffer: TBytes;
 begin
   raise ENotImplemented.Create('Not implemented');
-  result := EncodingGetString(ContentType, LBuffer);
 end;
 
 function TSparkleRequest.TranslateURI(const URI: string): string;
