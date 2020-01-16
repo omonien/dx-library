@@ -15,9 +15,11 @@ type
 
   TStringListHelper = record helper for StringList
     procedure Add(const AString: string);
-    procedure AddStrings(const AStrings: TStrings);
+    procedure AddStrings(const AStrings: TStrings); overload;
+    procedure AddStrings(const AStrings: StringList); overload;
     procedure Clear;
     function Contains(const AValue: string): boolean;
+    function IsEmpty: boolean;
   end;
 
 implementation
@@ -31,6 +33,16 @@ begin
 end;
 
 procedure TStringListHelper.AddStrings(const AStrings: TStrings);
+var
+  s: String;
+begin
+  for s in AStrings do
+  begin
+    self.Add(s);
+  end;
+end;
+
+procedure TStringListHelper.AddStrings(const AStrings: StringList);
 var
   s: String;
 begin
@@ -58,6 +70,11 @@ begin
       break
     end;
   end;
+end;
+
+function TStringListHelper.IsEmpty: boolean;
+begin
+  result := Length(self) = 0;
 end;
 
 end.
