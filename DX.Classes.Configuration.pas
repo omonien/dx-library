@@ -10,8 +10,10 @@ Type
 
   TConfigEntry = record
     Name: string;
+    Description: StringList;
     Section: string;
     Default: string;
+    procedure AssignDescription(AProperty: TRttiProperty);
   end;
 
   TConfigItems = class(TThreadList<TConfigEntry>)
@@ -39,15 +41,47 @@ Type
 
   TConfigurationManager<T: class> = class abstract(TSingleton<T>)
   private
-    FStorage: TIniFile;
+    FStorage: TMemIniFile;
     FStorageFile: string;
+    FDescription: StringList;
+    procedure AddComments(
+      var AStrings:    StringList;
+      const AComments: StringList);
   protected
+    /// <summary>
+    /// Writes a configuration file with all default values if no config file exists yet.
+    /// Reads an existing configuration file, and adds missing default values.
+    /// </summary>
     procedure CreateDefaultConfig; virtual;
+    /// <summary>
+    /// Returns the config value (default or whats in the config file) for
+    /// config property "AProperty" as TValue
+    /// </summary>
+    /// <remarks>
+    /// All GetConfigValueForProperty functions are to be used in Config
+    /// Property's Getter methods only;
+    /// </remarks>
     function GetConfigValueForProperty(const AProperty: string): TValue;
+    /// <summary>
+    /// Reads a ";" delimited string containing name=value pairs and returns
+    /// a string list, suitable to be added a TStrings compatible list of
+    /// name=value pairs
+    /// </summary>
+    /// <remarks>
+    /// This can be used to read a database connection string and passing it
+    /// into an FDConnection.Params property.
+    /// </remarks>
+    /// <example>
+    /// The following config value <br />
+    /// DBConnectionString=user=foo;password=bar <br />will be retruned as <br />
+    /// user=foo <br />password=bar
+    /// </example>
     function GetConfigValueForPropertyAsParams(const AProperty: string): StringList;
+    procedure WriteDescription;
   public
     constructor Create;
     destructor Destroy; override;
+    procedure WriteStorage;
   end;
 
 implementation
@@ -62,11 +96,34 @@ begin
   FDefault := ADefault;
 end;
 
+procedure TConfigurationManager<T>.AddComments(
+  var AStrings:    StringList;
+  const AComments: StringList);
+var
+  AComment: string;
+begin
+  for AComment in AComments do
+  begin
+    AStrings.Add('# ' + AComment);
+  end;
+end;
+
 constructor TConfigurationManager<T>.Create;
+var
+  LEncoding: TEncoding;
 begin
   inherited;
   FStorageFile := TPath.Combine(TPath.GetLibraryPath, TPath.GetFileNameWithoutExtension(ParamStr(0)) + '.ini');
-  FStorage := TIniFile.Create(FStorageFile);
+  if TFile.Exists(FStorageFile) then
+  begin
+    LEncoding := nil; // Use Encoding of existing file
+  end
+  else
+  begin
+    LEncoding := TEncoding.UTF8;
+  end;
+  FStorage := TMemIniFile.Create(FStorageFile, LEncoding);
+  FDescription.Clear;
   CreateDefaultConfig;
 end;
 
@@ -80,11 +137,11 @@ var
   LAttribute: TCustomAttribute;
   LSection: string;
   LDefault: string;
-  LDescription: string;
   LConfigItem: TConfigEntry;
-  LPersist: Boolean;
+  LConfigExists: Boolean;
+  LConfig: StringList;
 begin
-  LPersist := not TFile.Exists(FStorageFile);
+  LConfigExists := TFile.Exists(FStorageFile);
 
   LContext := TRttiContext.Create;
   try
@@ -95,11 +152,8 @@ begin
     begin
       if LAttribute is ConfigDescriptionAttribute then
       begin
-        LDescription := (LAttribute as ConfigDescriptionAttribute).FText;
-        if LPersist then
-        begin
-          TFile.WriteAllText(FStorageFile, '# ' + LDescription);
-        end;
+        // Main description
+        FDescription.Add((LAttribute as ConfigDescriptionAttribute).FText);
       end;
     end;
 
@@ -115,17 +169,22 @@ begin
           LConfigItem.Name := LProperty.Name;
           LConfigItem.Section := (LAttribute as ConfigValueAttribute).FSection;
           LConfigItem.Default := (LAttribute as ConfigValueAttribute).FDefault;
+          LConfigItem.AssignDescription(LProperty);
           TConfigRegistry.Default.Add(LConfigItem);
-          if LPersist then
+
+          if not FStorage.ValueExists(LConfigItem.Section, LConfigItem.Name) then
           begin
             FStorage.WriteString(LConfigItem.Section, LConfigItem.Name, LConfigItem.Default);
-            FStorage.UpdateFile;
           end;
         end;
       end;
     end;
   finally
     LContext.Free;
+  end;
+  if FStorage.Modified then
+  begin
+    WriteStorage;
   end;
 end;
 
@@ -164,10 +223,46 @@ begin
   end;
 end;
 
+procedure TConfigurationManager<T>.WriteStorage;
+begin
+  FStorage.UpdateFile;
+  WriteDescription;
+end;
+
+procedure TConfigurationManager<T>.WriteDescription;
+var
+  LContent: StringList;
+  LConfigItem: TConfigEntry;
+  LConfigItems: TList<TConfigEntry>;
+begin
+  LContent.Clear;
+  // Main description
+  AddComments(LContent, FDescription);
+
+  // Followed by description of all items
+  LConfigItems := TConfigRegistry.Default.LockList;
+  try
+    for LConfigItem in LConfigItems do
+    begin
+      if not LConfigItem.Description.IsEmpty then
+      begin
+        LContent.Add('#');
+        LContent.Add(Format('# %s / %s', [LConfigItem.Section, LConfigItem.Name]));
+        AddComments(LContent, LConfigItem.Description);
+      end;
+    end;
+  finally
+    TConfigRegistry.Default.UnlockList;
+  end;
+  LContent.AddStrings(TFile.ReadAllLines(FStorageFile));
+  TFile.WriteAllLines(FStorageFile, LContent);
+end;
+
 { ConfigDescritionAttribute }
 
 constructor ConfigDescriptionAttribute.Create(const AText: string);
 begin
+  inherited Create;
   FText := AText;
 end;
 
@@ -177,24 +272,40 @@ function TConfigItems.Get(const APropertyName: string): TConfigEntry;
 var
   LList: TList<TConfigEntry>;
   LItem: TConfigEntry;
-  LFound: Boolean;
 begin
   LList := LockList;
   try
-    LFound := false;
+    result := Default (TConfigEntry);
     for LItem in LList do
     begin
       if SameText(LItem.Name, APropertyName) then
       begin
-        LFound := true;
         result := LItem;
         break;
       end;
     end;
-    if not LFound then
+    if result.Name = '' then
       raise Exception.CreateFmt('No config item found for property "%s"', [APropertyName]);
   finally
     UnlockList;
+  end;
+end;
+
+{ TConfigEntry }
+
+procedure TConfigEntry.AssignDescription(AProperty: TRttiProperty);
+var
+  LAttributes: TArray<TCustomAttribute>;
+  LAttribute: TCustomAttribute;
+begin
+  Description.Clear;
+  LAttributes := AProperty.GetAttributes;
+  for LAttribute in LAttributes do
+  begin
+    if LAttribute is ConfigDescriptionAttribute then
+    begin
+      Description.Add((LAttribute as ConfigDescriptionAttribute).FText);
+    end;
   end;
 end;
 
