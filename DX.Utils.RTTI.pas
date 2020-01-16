@@ -129,6 +129,7 @@ var
   LProperties: TArray<TRttiProperty>;
   LProperty: TRttiProperty;
 begin
+  result.Clear;
   LContext := TRttiContext.Create;
   try
     LType := LContext.GetType(self.ClassType);
