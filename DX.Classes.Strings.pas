@@ -20,6 +20,7 @@ type
     procedure Clear;
     function Contains(const AValue: string): boolean;
     function IsEmpty: boolean;
+    function Text: string;
   end;
 
 implementation
@@ -75,6 +76,18 @@ end;
 function TStringListHelper.IsEmpty: boolean;
 begin
   result := Length(self) = 0;
+end;
+
+function TStringListHelper.Text: string;
+var
+  s: string;
+begin
+  result := '';
+  for s in self do
+  begin
+    result := result + s + #13#10;
+  end;
+  result.TrimRight([#10, #13]);
 end;
 
 end.
