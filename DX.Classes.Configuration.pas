@@ -61,7 +61,10 @@ Type
     /// All GetConfigValueForProperty functions are to be used in Config
     /// Property's Getter methods only;
     /// </remarks>
-    function GetConfigValueForProperty(const AProperty: string): TValue;
+    function GetConfigValueForProperty(const AProperty: string): Variant; overload;
+
+    function GetConfigValueForProperty<S>(const AProperty: string): S; overload;
+
     /// <summary>
     /// Reads a ";" delimited string containing name=value pairs and returns
     /// a string list, suitable to be added a TStrings compatible list of
@@ -87,7 +90,7 @@ Type
 implementation
 
 uses
-  System.IOUtils;
+  System.IOUtils, Loomis.SoapServer.Logger;
 
 constructor ConfigValueAttribute.Create(const ASection, ADefault: string);
 begin
@@ -194,29 +197,38 @@ begin
   inherited;
 end;
 
-function TConfigurationManager<T>.GetConfigValueForProperty(const AProperty: string): TValue;
+function TConfigurationManager<T>.GetConfigValueForProperty(const AProperty: string): Variant;
 var
-  s: string;
+  S: string;
   LConfigItem: TConfigEntry;
 begin
   try
     LConfigItem := TConfigRegistry.Default.Get(AProperty);
-    s := FStorage.ReadString(LConfigItem.Section, LConfigItem.Name, LConfigItem.Default);
-    result := TValue.From(s);
+    S := FStorage.ReadString(LConfigItem.Section, LConfigItem.Name, LConfigItem.Default);
+    result := S;
   except
     on e: Exception do
+    begin
+      // TLoomisLogger.Log(e);
       raise Exception.CreateFmt('Error reading config value for "%s"'#13#10'%s', [AProperty, e.message]);
+    end;
   end;
+end;
+
+function TConfigurationManager<T>.GetConfigValueForProperty<S>(const AProperty: string): S;
+begin
+  // LTypeInfo : =
 end;
 
 function TConfigurationManager<T>.GetConfigValueForPropertyAsParams(const AProperty: string): StringList;
 var
   LStrings: TStrings;
+  s:string;
 begin
   LStrings := TStringList.Create;
   try
     LStrings.Delimiter := ';';
-    LStrings.DelimitedText := GetConfigValueForProperty(AProperty).AsString;
+    LStrings.DelimitedText := GetConfigValueForProperty(AProperty);
     result.AddStrings(LStrings);
   finally
     FreeAndNil(LStrings);
