@@ -90,7 +90,7 @@ Type
 implementation
 
 uses
-  System.IOUtils, Loomis.SoapServer.Logger;
+  System.IOUtils;
 
 constructor ConfigValueAttribute.Create(const ASection, ADefault: string);
 begin
