@@ -17,10 +17,11 @@ type
     procedure Add(const AString: string);
     procedure AddStrings(const AStrings: TStrings); overload;
     procedure AddStrings(const AStrings: StringList); overload;
+    procedure AddDelimited(const AText: string; const ADelimiter:string);
     procedure Clear;
     function Contains(const AValue: string): boolean;
     function IsEmpty: boolean;
-    function Text: string;
+    function Text(const ADelimiter: string = #13#10): string;
   end;
 
 implementation
@@ -41,6 +42,11 @@ begin
   begin
     self.Add(s);
   end;
+end;
+
+procedure TStringListHelper.AddDelimited(const AText, ADelimiter: string);
+begin
+  self := AText.Split(ADelimiter);
 end;
 
 procedure TStringListHelper.AddStrings(const AStrings: StringList);
@@ -78,16 +84,16 @@ begin
   result := Length(self) = 0;
 end;
 
-function TStringListHelper.Text: string;
+function TStringListHelper.Text(const ADelimiter: string = #13#10): string;
 var
   s: string;
 begin
   result := '';
   for s in self do
   begin
-    result := result + s + #13#10;
+    result := result + s + ADelimiter;
   end;
-  result.TrimRight([#10, #13]);
+  result := result.TrimRight(ADelimiter.ToCharArray);
 end;
 
 end.

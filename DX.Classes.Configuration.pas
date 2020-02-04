@@ -13,7 +13,9 @@ Type
     Description: StringList;
     Section: string;
     Default: string;
+    IsEncrypted: Boolean;
     procedure AssignDescription(AProperty: TRttiProperty);
+    constructor Create(const AName: string);
   end;
 
   TConfigItems = class(TThreadList<TConfigEntry>)
@@ -39,7 +41,12 @@ Type
     constructor Create(const AText: string);
   end;
 
+  ConfigValueEncryptedAttribute = class(TCustomAttribute)
+  end;
+
   TConfigurationManager<T: class> = class abstract(TSingleton<T>)
+  strict private
+    FEncryptionKey: string;
   private
     FStorage: TMemIniFile;
     FStorageFile: string;
@@ -63,8 +70,6 @@ Type
     /// </remarks>
     function GetConfigValueForProperty(const AProperty: string): Variant; overload;
 
-    function GetConfigValueForProperty<S>(const AProperty: string): S; overload;
-
     /// <summary>
     /// Reads a ";" delimited string containing name=value pairs and returns
     /// a string list, suitable to be added a TStrings compatible list of
@@ -80,17 +85,24 @@ Type
     /// user=foo <br />password=bar
     /// </example>
     function GetConfigValueForPropertyAsParams(const AProperty: string): StringList;
+
+    procedure SetConfigValueForProperty(
+      const AProperty: string;
+      AValue:          Variant);
     procedure WriteDescription;
+    function Encrypt(const AText: string): string;
+    function Decrypt(const AEncryptedText: string): string;
   public
     constructor Create;
     destructor Destroy; override;
     procedure WriteStorage;
+    property EncryptionKey: string write FEncryptionKey;
   end;
 
 implementation
 
 uses
-  System.IOUtils, Loomis.SoapServer.Logger;
+  System.IOUtils, Loomis.SoapServer.Logger, Data.DBXEncryption, System.NetEncoding;
 
 constructor ConfigValueAttribute.Create(const ASection, ADefault: string);
 begin
@@ -116,6 +128,7 @@ var
   LEncoding: TEncoding;
 begin
   inherited;
+  FEncryptionKey := 'DeveloperExperts2020';
   FStorageFile := TPath.Combine(TPath.GetLibraryPath, TPath.GetFileNameWithoutExtension(ParamStr(0)) + '.ini');
   if TFile.Exists(FStorageFile) then
   begin
@@ -143,6 +156,7 @@ var
   LConfigItem: TConfigEntry;
   LConfigExists: Boolean;
   LConfig: StringList;
+  LValue: string;
 begin
   LConfigExists := TFile.Exists(FStorageFile);
 
@@ -158,6 +172,7 @@ begin
         // Main description
         FDescription.Add((LAttribute as ConfigDescriptionAttribute).FText);
       end;
+
     end;
 
     TConfigRegistry.Default.Clear;
@@ -165,6 +180,8 @@ begin
     for LProperty in LConfigProperties do
     begin
       LAttributes := LProperty.GetAttributes;
+      LConfigItem.Name := '';
+      LConfigItem.IsEncrypted := false;
       for LAttribute in LAttributes do
       begin
         if LAttribute is ConfigValueAttribute then
@@ -173,13 +190,24 @@ begin
           LConfigItem.Section := (LAttribute as ConfigValueAttribute).FSection;
           LConfigItem.Default := (LAttribute as ConfigValueAttribute).FDefault;
           LConfigItem.AssignDescription(LProperty);
-          TConfigRegistry.Default.Add(LConfigItem);
-
-          if not FStorage.ValueExists(LConfigItem.Section, LConfigItem.Name) then
-          begin
-            FStorage.WriteString(LConfigItem.Section, LConfigItem.Name, LConfigItem.Default);
-          end;
         end;
+        if LAttribute is ConfigValueEncryptedAttribute then
+        begin
+          LConfigItem.IsEncrypted := true;
+        end;
+      end;
+      if LConfigItem.Name > '' then
+      begin
+        if not FStorage.ValueExists(LConfigItem.Section, LConfigItem.Name) then
+        begin
+          LValue := LConfigItem.Default;
+          if LConfigItem.IsEncrypted then
+          begin
+            LValue := Encrypt(LValue);
+          end;
+          FStorage.WriteString(LConfigItem.Section, LConfigItem.Name, LValue);
+        end;
+        TConfigRegistry.Default.Add(LConfigItem);
       end;
     end;
   finally
@@ -197,6 +225,78 @@ begin
   inherited;
 end;
 
+function TConfigurationManager<T>.Encrypt(const AText: string): string;
+var
+  LCipher: TPC1Cypher;
+  LEncrypted: TBytes;
+  LUnencrypted: TBytes;
+  i: Integer;
+begin
+  LCipher := TPC1Cypher.Create(FEncryptionKey);
+  try
+    LUnencrypted := TEncoding.UTF8.GetBytes(AText);
+    SetLength(LEncrypted, Length(LUnencrypted));
+    for i := 0 to Length(LUnencrypted) - 1 do
+    begin
+      LEncrypted[i] := LCipher.Cypher(LUnencrypted[i]);
+    end;
+    result := TNetEncoding.Base64.EncodeBytesToString(LEncrypted);
+  finally
+    FreeAndNil(LCipher);
+  end;
+end;
+
+function TConfigurationManager<T>.Decrypt(const AEncryptedText: string): string;
+var
+  LCipher: TPC1Cypher;
+  LEncrypted: TBytes;
+  LUnencrypted: TBytes;
+  i: Integer;
+begin
+  if AEncryptedText.Trim = '' then
+  begin
+    result := '';
+  end
+  else
+  begin
+    LCipher := TPC1Cypher.Create(FEncryptionKey);
+    try
+      LEncrypted := TNetEncoding.Base64.DecodeStringToBytes(AEncryptedText);
+      SetLength(LUnencrypted, Length(LEncrypted));
+      for i := 0 to Length(LEncrypted) - 1 do
+      begin
+        LUnencrypted[i] := LCipher.Decypher(LEncrypted[i]);
+      end;
+      result := TEncoding.UTF8.GetString(LUnencrypted)
+    finally
+      FreeAndNil(LCipher);
+    end;
+  end;
+end;
+
+procedure TConfigurationManager<T>.SetConfigValueForProperty(
+  const AProperty: string;
+  AValue:          Variant);
+var
+  S: string;
+  LConfigItem: TConfigEntry;
+begin
+  try
+    LConfigItem := TConfigRegistry.Default.Get(AProperty);
+    S := AValue;
+    if LConfigItem.IsEncrypted then
+    begin
+      S := Encrypt(S);
+    end;
+    FStorage.WriteString(LConfigItem.Section, LConfigItem.Name, S);
+  except
+    on e: Exception do
+    begin
+      raise Exception.CreateFmt('Error writing config value for "%s"'#13#10'%s', [AProperty, e.message]);
+    end;
+  end;
+end;
+
 function TConfigurationManager<T>.GetConfigValueForProperty(const AProperty: string): Variant;
 var
   S: string;
@@ -205,25 +305,23 @@ begin
   try
     LConfigItem := TConfigRegistry.Default.Get(AProperty);
     S := FStorage.ReadString(LConfigItem.Section, LConfigItem.Name, LConfigItem.Default);
+    if (S <> LConfigItem.Default) and LConfigItem.IsEncrypted then
+    begin
+      S := Decrypt(S);
+    end;
     result := S;
   except
     on e: Exception do
     begin
-      // TLoomisLogger.Log(e);
       raise Exception.CreateFmt('Error reading config value for "%s"'#13#10'%s', [AProperty, e.message]);
     end;
   end;
 end;
 
-function TConfigurationManager<T>.GetConfigValueForProperty<S>(const AProperty: string): S;
-begin
-  // LTypeInfo : =
-end;
-
 function TConfigurationManager<T>.GetConfigValueForPropertyAsParams(const AProperty: string): StringList;
 var
   LStrings: TStrings;
-  s:string;
+  S: string;
 begin
   LStrings := TStringList.Create;
   try
@@ -319,6 +417,15 @@ begin
       Description.Add((LAttribute as ConfigDescriptionAttribute).FText);
     end;
   end;
+end;
+
+constructor TConfigEntry.Create(const AName: string);
+begin
+  Name := AName;
+  IsEncrypted := false;
+  Description.Clear;
+  Default := '';
+  Section := '';
 end;
 
 end.
