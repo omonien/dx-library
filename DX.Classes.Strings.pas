@@ -3,7 +3,7 @@ unit DX.Classes.Strings;
 interface
 
 uses
-  System.Classes, System.SysUtils;
+  System.Classes, System.SysUtils, System.Generics.Collections;
 
 type
 
@@ -21,6 +21,7 @@ type
     procedure Clear;
     function Contains(const AValue: string): boolean;
     function IsEmpty: boolean;
+    procedure Sort;
     function Text(const ADelimiter: string = #13#10): string;
   end;
 
@@ -82,6 +83,11 @@ end;
 function TStringListHelper.IsEmpty: boolean;
 begin
   result := Length(self) = 0;
+end;
+
+procedure TStringListHelper.Sort;
+begin
+  TArray.Sort<string>(self);
 end;
 
 function TStringListHelper.Text(const ADelimiter: string = #13#10): string;

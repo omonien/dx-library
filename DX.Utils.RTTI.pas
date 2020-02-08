@@ -141,6 +141,7 @@ begin
         Result.Add(LProperty.Name + ' = ' + LProperty.GetValue(self).ToString);
       end;
     end;
+    Result.Sort;
   finally
     LContext.Free;
   end;
