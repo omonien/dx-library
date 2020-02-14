@@ -422,7 +422,6 @@ var
   LYear: integer;
   LMonth: integer;
   LDay: integer;
-  LFileDate: TDate;
 begin
   LFileStream := TFile.OpenRead(FLogFileName);
   try
@@ -505,11 +504,6 @@ begin
 end;
 
 procedure TLogThread.UpdateLogFile;
-{$IF (defined(MSWindows)or defined(LINUX) or defined(MacOS)) and not (defined(IOS)))}
-var
-  F: TextFile;
-  s: string;
-{$ENDIF}
 begin
 {$IF (defined(MSWindows) or defined(LINUX) or defined(MacOS)) and not (defined(IOS))) }
   try
