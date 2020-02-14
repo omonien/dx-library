@@ -34,14 +34,18 @@ type
     FExternalStrings: TStrings;
     FLogBuffer: TStrings;
     FThread: TThread;
+    // Todo: implement custom date format!
     FDateFormat: string;
     FShowExceptionProc: TShowExceptionProc;
+    FMaxLogAge: integer;
   protected
     constructor Create;
     class function GetDateFormat: string; static;
     class procedure SetExternalStrings(AStrings: TStrings); static;
     class procedure SetExternalStringsAppendOnTop(const Value: Boolean); static;
     class procedure SetDateFormat(const ADateFormat: string); static;
+    class function GetMaxLogAge: integer; static;
+    class procedure SetMaxLogAge(const Value: integer); static;
     function ExternalStringsAssigned: Boolean;
     procedure SetShowExceptionProc(const Value: TShowExceptionProc);
   public
@@ -62,6 +66,13 @@ type
     /// Defaults to YYYY-MM-DD hh:nn:ss,zzz
     /// </summary>
     class property DateFormat: string read GetDateFormat write SetDateFormat;
+
+    /// <summary>
+    /// MaxLogAge specifies in days how much logging history will be kept.
+    /// Older log messages will be rolled over into a sub dir "logs". <br />
+    /// If MaxLogAge is zero (default), then there is no limit.
+    /// </summary>
+    class property MaxLogAge: integer read GetMaxLogAge write SetMaxLogAge;
     class procedure Log(const AMessage: string); overload;
     class procedure Log(
       const AFormatString: string;
@@ -100,7 +111,7 @@ implementation
 uses
   WinAPI.Windows,
   WinAPI.Messages,
-  System.IOUtils;
+  System.IOUtils, System.DateUtils;
 {$ENDIF}
 {$IF defined(IOS) or Defined(MACOS)}
 
@@ -124,10 +135,13 @@ type
     FExternalBuffer: TStrings;
     // Todo make configurable
     FLogFileName: string;
+    FLastRollOver: TDate;
 
     procedure UpdateConsole;
     procedure UpdateLogFile;
     procedure UpdateExternalStrings;
+    procedure RollOver;
+    function GetLogFileDate: TDate;
   protected
     procedure Execute; override;
     procedure SyncronizeExternalStrings;
@@ -168,6 +182,7 @@ begin
   FThread := TLogThread.Create;
   FExternalStrings := nil;
   FDateFormat := 'YYYY-MM-DD hh:nn:ss,zzz';
+  FMaxLogAge := 0;
   FThread.Start;
 end;
 
@@ -303,6 +318,26 @@ begin
   FInstance := TDXLogger.Create;
 end;
 
+class function TDXLogger.GetMaxLogAge: integer;
+begin
+  TMonitor.Enter(FInstance);
+  try
+    result := Instance.FMaxLogAge;
+  finally
+    TMonitor.Exit(FInstance);
+  end;
+end;
+
+class procedure TDXLogger.SetMaxLogAge(const Value: integer);
+begin
+  TMonitor.Enter(FInstance);
+  try
+    Instance.FMaxLogAge := Value;
+  finally
+    TMonitor.Exit(FInstance);
+  end;
+end;
+
 { TLogThread }
 
 constructor TLogThread.Create;
@@ -316,8 +351,10 @@ begin
   FLogFileName := TPath.Combine(s, TPath.ChangeExtension(TPath.GetFileName(ParamStr(0)), '.log'));
 
   FTempBuffer := TStringList.Create;
+  FTempBuffer.TrailingLineBreak := false;
   FExternalBuffer := TStringList.Create;
   FExternalBuffer.TrailingLineBreak := false;
+  FLastRollOver := 0;
 end;
 
 destructor TLogThread.Destroy;
@@ -375,6 +412,82 @@ begin
   end;
 end;
 
+function TLogThread.GetLogFileDate: TDate;
+var
+  s: string;
+  LBuffer: TBytes;
+  LFileStream: TFileStream;
+  LCount: integer;
+  LComponents: TArray<string>;
+  LYear: integer;
+  LMonth: integer;
+  LDay: integer;
+  LFileDate: TDate;
+begin
+  LFileStream := TFile.OpenRead(FLogFileName);
+  try
+    // Todo: Make DateFormat customizable!
+    // At the begining there should a date: 2020-02-14
+    // Extract it and use it as the logfile's date/age
+    SetLength(LBuffer, 10);
+    LCount := LFileStream.Read(LBuffer, 10);
+    result := 0;
+    if LCount = 10 then
+    begin
+      s := TEncoding.UTF8.GetString(LBuffer);
+      LComponents := s.Split(['-']);
+      if Length(LComponents) = 3 then
+      begin
+        LYear := StrToIntDef(LComponents[0], 0);
+        LMonth := StrToIntDef(LComponents[1], 0);
+        LDay := StrToIntDef(LComponents[2], 0);
+        if (LYear * LMonth * LDay > 0) then
+        begin
+          result := EncodeDate(LYear, LMonth, LDay);
+        end;
+      end;
+    end;
+  finally
+    FreeAndNil(LFileStream);
+  end;
+end;
+
+procedure TLogThread.RollOver;
+var
+  LLogFileDate: TDate;
+  LRollOver: string;
+  LLogArchive: string;
+  LMaxAge: integer;
+begin
+  // Only try once a day to roll over
+  if FLastRollOver < Today then
+  begin
+    LMaxAge := TDXLogger.MaxLogAge;
+    if LMaxAge > 0 then
+    begin
+      try
+        FLastRollOver := Today;
+        LLogFileDate := GetLogFileDate;
+        if (LLogFileDate + LMaxAge) < Today then
+        begin
+          LRollOver := TPath.GetFileNameWithoutExtension(FLogFileName) + '-' +
+            FormatDateTime('YYYY-MM-DD', LLogFileDate) + '.log';
+          LLogArchive := TPath.Combine(TPath.GetDirectoryName(FLogFileName), 'Logs');
+          TDirectory.CreateDirectory(LLogArchive);
+          LRollOver := TPath.Combine(LLogArchive, LRollOver);
+          TFile.Copy(FLogFileName, LRollOver, true);
+          TFile.Delete(FLogFileName);
+        end;
+      except
+        on E: Exception do
+        begin
+          Log('Roll-Over failed : %s - %s', [LRollOver, E.Message]);
+        end;
+      end;
+    end;
+  end;
+end;
+
 procedure TLogThread.SyncronizeExternalStrings;
 begin
   if TDXLogger.Instance.ExternalStringsAssigned then
@@ -392,7 +505,7 @@ begin
 end;
 
 procedure TLogThread.UpdateLogFile;
-{$IF (defined(MSWindows) or defined(MacOS)) and not (defined(IOS)))}
+{$IF (defined(MSWindows)or defined(LINUX) or defined(MacOS)) and not (defined(IOS)))}
 var
   F: TextFile;
   s: string;
@@ -400,20 +513,12 @@ var
 begin
 {$IF (defined(MSWindows) or defined(LINUX) or defined(MacOS)) and not (defined(IOS))) }
   try
-    AssignFile(F, FLogFileName);
-    try
-      if FileExists(FLogFileName) then
-        Append(F)
-      else
-        Rewrite(F);
-      for s in FTempBuffer do
-      begin
-        Writeln(F, s);
-      end;
-      Flush(F);
-    finally
-      CloseFile(F);
+    RollOver;
+    if TFile.Exists(FLogFileName) then
+    begin
+      TFile.AppendAllText(FLogFileName, sLineBreak);
     end;
+    TFile.AppendAllText(FLogFileName, FTempBuffer.Text, TEncoding.UTF8);
   except
     // Nothing - if logging doesn't work, then there nothing we can do about.
   end;
