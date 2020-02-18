@@ -17,7 +17,7 @@ type
     procedure Add(const AString: string);
     procedure AddStrings(const AStrings: TStrings); overload;
     procedure AddStrings(const AStrings: StringList); overload;
-    procedure AddDelimited(const AText: string; const ADelimiter:string);
+    procedure AddDelimited(const AText: string; const ADelimiter: string);
     procedure Clear;
     function Contains(const AValue: string): boolean;
     function IsEmpty: boolean;
@@ -47,7 +47,7 @@ end;
 
 procedure TStringListHelper.AddDelimited(const AText, ADelimiter: string);
 begin
-  self := AText.Split(ADelimiter);
+  self := AText.Split([ADelimiter], TStringSplitOptions.None);
 end;
 
 procedure TStringListHelper.AddStrings(const AStrings: StringList);

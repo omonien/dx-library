@@ -351,9 +351,7 @@ begin
   FLogFileName := TPath.Combine(s, TPath.ChangeExtension(TPath.GetFileName(ParamStr(0)), '.log'));
 
   FTempBuffer := TStringList.Create;
-  FTempBuffer.TrailingLineBreak := false;
   FExternalBuffer := TStringList.Create;
-  FExternalBuffer.TrailingLineBreak := false;
   FLastRollOver := 0;
 end;
 
@@ -508,10 +506,6 @@ begin
 {$IF (defined(MSWindows) or defined(LINUX) or defined(MacOS)) and not (defined(IOS))) }
   try
     RollOver;
-    if TFile.Exists(FLogFileName) then
-    begin
-      TFile.AppendAllText(FLogFileName, sLineBreak);
-    end;
     TFile.AppendAllText(FLogFileName, FTempBuffer.Text, TEncoding.UTF8);
   except
     // Nothing - if logging doesn't work, then there nothing we can do about.
