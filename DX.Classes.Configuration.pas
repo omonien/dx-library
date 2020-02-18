@@ -102,7 +102,7 @@ Type
 implementation
 
 uses
-  System.IOUtils, Loomis.SoapServer.Logger, Data.DBXEncryption, System.NetEncoding;
+  System.IOUtils, Data.DBXEncryption, System.NetEncoding;
 
 constructor ConfigValueAttribute.Create(const ASection, ADefault: string);
 begin
