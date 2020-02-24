@@ -59,7 +59,9 @@ Type
     procedure AddComments(
       var AStrings:    StringList;
       const AComments: StringList);
-  protected
+    function GetEncoding: TEncoding;
+  strict protected
+    procedure SetEncoding(const Value: TEncoding);
     /// <summary>
     /// Writes a configuration file with all default values if no config file exists yet.
     /// Reads an existing configuration file, and adds missing default values.
@@ -102,12 +104,14 @@ Type
     destructor Destroy; override;
     procedure WriteStorage;
     property EncryptionKey: string write FEncryptionKey;
+    property Filename: string read FStorageFile;
+    property Encoding: TEncoding read GetEncoding write SetEncoding;
   end;
 
 implementation
 
 uses
-  System.IOUtils, Loomis.SoapServer.Logger, Data.DBXEncryption, System.NetEncoding, DX.Utils.Rtti;
+  System.IOUtils, Data.DBXEncryption, System.NetEncoding, DX.Utils.Rtti;
 
 constructor ConfigValueAttribute.Create(const ASection, ADefault: string);
 begin
@@ -130,9 +134,11 @@ end;
 
 constructor TConfigurationManager<T>.Create;
 var
+  LContent: TBytes;
   LEncoding: TEncoding;
 begin
   inherited;
+  LEncoding := nil;
   FEncryptionKey := 'DeveloperExperts2020';
 
   if self.HasAttribute(ConfigFileAttribute) then
@@ -144,14 +150,17 @@ begin
     FStorageFile := TPath.GetFileNameWithoutExtension(ParamStr(0)) + '.ini';
   end;
   FStorageFile := TPath.Combine(TPath.GetLibraryPath, FStorageFile);
+
   if TFile.Exists(FStorageFile) then
   begin
-    LEncoding := nil; // Use Encoding of existing file
+    LContent := TFile.ReadAllBytes(Filename);
+    TEncoding.GetBufferEncoding(LContent, LEncoding);
   end
   else
   begin
     LEncoding := TEncoding.UTF8;
   end;
+
   FStorage := TMemIniFile.Create(FStorageFile, LEncoding);
   FDescription.Clear;
   CreateDefaultConfig;
@@ -168,12 +177,10 @@ var
   LSection: string;
   LDefault: string;
   LConfigItem: TConfigEntry;
-  LConfigExists: Boolean;
   LConfig: StringList;
   LValue: string;
+  LContent: TBytes;
 begin
-  LConfigExists := TFile.Exists(FStorageFile);
-
   LContext := TRttiContext.Create;
   try
     LConfigType := LContext.GetType(T);
@@ -311,6 +318,11 @@ begin
   end;
 end;
 
+procedure TConfigurationManager<T>.SetEncoding(const Value: TEncoding);
+begin
+  FStorage.Encoding := Value;
+end;
+
 function TConfigurationManager<T>.GetConfigValueForProperty(const AProperty: string): Variant;
 var
   S: string;
@@ -347,6 +359,11 @@ begin
   end;
 end;
 
+function TConfigurationManager<T>.GetEncoding: TEncoding;
+begin
+  result := FStorage.Encoding;
+end;
+
 procedure TConfigurationManager<T>.WriteStorage;
 begin
   FStorage.UpdateFile;
@@ -378,8 +395,13 @@ begin
   finally
     TConfigRegistry.Default.UnlockList;
   end;
-  LContent.AddStrings(TFile.ReadAllLines(FStorageFile));
-  TFile.WriteAllLines(FStorageFile, LContent);
+  // If the description is updated, then the file is ultimately updated to UTF8 Encoding
+  if not LContent.IsEmpty then
+  begin
+    LContent.AddStrings(TFile.ReadAllLines(FStorageFile, Encoding));
+    TFile.WriteAllLines(FStorageFile, LContent, TEncoding.UTF8);
+    Encoding := TEncoding.UTF8;
+  end;
 end;
 
 { ConfigDescritionAttribute }

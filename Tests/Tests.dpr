@@ -14,7 +14,9 @@ uses
   SysUtilsTests in 'SysUtilsTests.pas',
   ConfigJsonTests in 'ConfigJsonTests.pas',
   DX.Settings.Json in '..\DX.Settings.Json.pas',
-  Tests.Attributes in 'Tests.Attributes.pas';
+  Tests.Attributes in 'Tests.Attributes.pas',
+  Tests.Configuration in 'Tests.Configuration.pas',
+  Tests.ConfigurationAnsi in 'Tests.ConfigurationAnsi.pas';
 
 var
   runner : ITestRunner;

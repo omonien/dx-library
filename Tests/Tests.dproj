@@ -79,6 +79,8 @@
         <DCCReference Include="ConfigJsonTests.pas"/>
         <DCCReference Include="..\DX.Settings.Json.pas"/>
         <DCCReference Include="Tests.Attributes.pas"/>
+        <DCCReference Include="Tests.Configuration.pas"/>
+        <DCCReference Include="Tests.ConfigurationAnsi.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>
