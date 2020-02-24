@@ -12,7 +12,7 @@ type
   EConstructorNotFound = class(Exception);
 
   /// <summary>
-  /// Offers helper methods for TObject
+  /// Offers helper methods for TObject, mainly for simplified property and attribute access
   /// </summary>
   TObjectHelper = class helper for TObject
     /// <summary>
@@ -24,9 +24,16 @@ type
     /// </param>
     function ListProperties(const AExcludes: TArray<string>): StringList; overload;
     /// <summary>
-    ///   Lists all properties of the given class instance as 'name = value'
+    /// Lists all properties of the given class instance as 'name = value'
     /// </summary>
     function ListProperties: StringList; overload;
+
+    /// <summary>
+    /// Returns true if the given class has the specified attribute attached.
+    /// </summary>
+    function HasAttribute(AAttribute: TClass): boolean;
+    function AttributeValue(AAttribute: TClass): string;
+    function GetAttribute(AAttribute: TClass): TCustomAttribute;
   end;
 
   TClassConstructor = class
@@ -54,7 +61,7 @@ implementation
 
 uses
   System.Json,
-  Data.DBXJsonReflect;
+  Data.DBXJsonReflect, DX.Classes.Attributes;
 
 class function TClassConstructor.Clone(AInstance: TObject): TObject;
 var
@@ -129,7 +136,7 @@ var
   LProperties: TArray<TRttiProperty>;
   LProperty: TRttiProperty;
 begin
-  result.Clear;
+  Result.Clear;
   LContext := TRttiContext.Create;
   try
     LType := LContext.GetType(self.ClassType);
@@ -142,6 +149,71 @@ begin
       end;
     end;
     Result.Sort;
+  finally
+    LContext.Free;
+  end;
+end;
+
+function TObjectHelper.AttributeValue(AAttribute: TClass): string;
+var
+  LAttribute: StringValueAttribute;
+begin
+  Result := '';
+  if AAttribute.InheritsFrom(StringValueAttribute) then
+  begin
+    LAttribute := StringValueAttribute(GetAttribute(AAttribute));
+    if Assigned(LAttribute) then
+    begin
+      result := LAttribute.Value;
+    end;
+  end;
+end;
+
+function TObjectHelper.GetAttribute(AAttribute: TClass): TCustomAttribute;
+var
+  LContext: TRttiContext;
+  LConfigType: TRttiType;
+  LAttributes: TArray<TCustomAttribute>;
+  LAttribute: TCustomAttribute;
+begin
+  Result := nil;
+  LContext := TRttiContext.Create;
+  try
+    LConfigType := LContext.GetType(self.ClassType);
+    LAttributes := LConfigType.GetAttributes;
+    for LAttribute in LAttributes do
+    begin
+      if LAttribute.ClassType = AAttribute then
+      begin
+        Result := LAttribute;
+        break;
+      end;
+    end;
+  finally
+    LContext.Free;
+  end;
+end;
+
+function TObjectHelper.HasAttribute(AAttribute: TClass): boolean;
+var
+  LContext: TRttiContext;
+  LConfigType: TRttiType;
+  LAttributes: TArray<TCustomAttribute>;
+  LAttribute: TCustomAttribute;
+begin
+  Result := false;
+  LContext := TRttiContext.Create;
+  try
+    LConfigType := LContext.GetType(self.ClassType);
+    LAttributes := LConfigType.GetAttributes;
+    for LAttribute in LAttributes do
+    begin
+      if LAttribute is AAttribute then
+      begin
+        Result := true;
+        break;
+      end;
+    end;
   finally
     LContext.Free;
   end;

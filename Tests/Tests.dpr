@@ -13,7 +13,8 @@ uses
   DUnitX.TestFramework,
   SysUtilsTests in 'SysUtilsTests.pas',
   ConfigJsonTests in 'ConfigJsonTests.pas',
-  DX.Settings.Json in '..\DX.Settings.Json.pas';
+  DX.Settings.Json in '..\DX.Settings.Json.pas',
+  Tests.Attributes in 'Tests.Attributes.pas';
 
 var
   runner : ITestRunner;

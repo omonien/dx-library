@@ -4,7 +4,7 @@ interface
 
 uses
   System.Classes, System.SysUtils, System.IniFiles, System.Rtti, System.Generics.Collections,
-  DX.Classes.Singleton, DX.Classes.Strings;
+  DX.Classes.Singleton, DX.Classes.Strings, DX.Classes.Attributes;
 
 Type
 
@@ -24,6 +24,11 @@ Type
   end;
 
   TConfigRegistry = class(TSingleton<TConfigItems>)
+  end;
+
+  ConfigFileAttribute = class(StringValueAttribute)
+  public
+    constructor Create(const AFilename: string);
   end;
 
   ConfigValueAttribute = class(TCustomAttribute)
@@ -102,7 +107,7 @@ Type
 implementation
 
 uses
-  System.IOUtils, Loomis.SoapServer.Logger, Data.DBXEncryption, System.NetEncoding;
+  System.IOUtils, Loomis.SoapServer.Logger, Data.DBXEncryption, System.NetEncoding, DX.Utils.Rtti;
 
 constructor ConfigValueAttribute.Create(const ASection, ADefault: string);
 begin
@@ -129,7 +134,16 @@ var
 begin
   inherited;
   FEncryptionKey := 'DeveloperExperts2020';
-  FStorageFile := TPath.Combine(TPath.GetLibraryPath, TPath.GetFileNameWithoutExtension(ParamStr(0)) + '.ini');
+
+  if self.HasAttribute(ConfigFileAttribute) then
+  begin
+    FStorageFile := self.AttributeValue(ConfigFileAttribute);
+  end
+  else
+  begin
+    FStorageFile := TPath.GetFileNameWithoutExtension(ParamStr(0)) + '.ini';
+  end;
+  FStorageFile := TPath.Combine(TPath.GetLibraryPath, FStorageFile);
   if TFile.Exists(FStorageFile) then
   begin
     LEncoding := nil; // Use Encoding of existing file
@@ -426,6 +440,13 @@ begin
   Description.Clear;
   Default := '';
   Section := '';
+end;
+
+{ ConfigFileAttribute }
+
+constructor ConfigFileAttribute.Create(const AFilename: string);
+begin
+  Inherited Create(AFilename);
 end;
 
 end.
