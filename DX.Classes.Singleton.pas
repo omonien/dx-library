@@ -23,7 +23,14 @@ type
   public
     class constructor Create;
     class destructor Destroy;
+    /// <summary>
+    ///   The default instance.
+    /// </summary>
     class function Default: T;
+    /// <summary>
+    ///   Alias of Default
+    /// </summary>
+    class function Instance: T;
   end;
 
 implementation
@@ -49,6 +56,11 @@ end;
 class destructor TSingleton<T>.Destroy;
 begin
   FreeAndNil(FDefaultInstance);
+end;
+
+class function TSingleton<T>.Instance: T;
+begin
+ result := Default;
 end;
 
 end.
