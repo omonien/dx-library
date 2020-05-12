@@ -34,6 +34,7 @@ var
   LHostAlternative: string;
   LFor: string;
   LProto: string;
+  LHeaders: TBytes;
 begin
   // Find relevant proxy headers
 
@@ -74,6 +75,10 @@ begin
   begin
     Context.Request.RawUri := LProto + LHost;
   end;
+
+//  LHeaders := TEncoding.ASCII.GetBytes(Context.Request.Headers.RawWideHeaders);
+//  Context.Request.Headers.RawWideHeaders := TEncoding.Default.GetString(LHeaders);
+
   Next(Context);
 end;
 
