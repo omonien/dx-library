@@ -29,12 +29,10 @@ procedure TReverseProxyMiddleware.ProcessRequest(
   Context: THttpServerContext;
   Next:    THttpServerProc);
 var
-  LForwardForHost: string;
   LHost: string;
   LHostAlternative: string;
   LFor: string;
   LProto: string;
-  LHeaders: TBytes;
 begin
   // Find relevant proxy headers
 
