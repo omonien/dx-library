@@ -43,6 +43,11 @@ type
     procedure AssignRecord(const ASource: IRecord);
   end;
 
+  TFDConnectionHelper = class helper for TFDConnection
+  public
+    procedure SetParamsFromConnectionString(const AConnectionString: string);
+  end;
+
 implementation
 
 { TFDDatasetHelper }
@@ -107,6 +112,23 @@ begin
       result := LField.Value;
       break;
     end;
+  end;
+end;
+
+{ TFDConnectionHelper }
+
+procedure TFDConnectionHelper.SetParamsFromConnectionString(const AConnectionString: string);
+var
+  LConnectionString: TStringList;
+begin
+  Params.Clear;
+  LConnectionString := TStringList.Create;
+  try
+    LConnectionString.Delimiter := ';';
+    LConnectionString.DelimitedText := AConnectionString;
+    Params.AddStrings(LConnectionString);
+  finally
+    FreeAndNIL(LConnectionString);
   end;
 end;
 
