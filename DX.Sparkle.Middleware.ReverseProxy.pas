@@ -33,6 +33,8 @@ var
   LHostAlternative: string;
   LFor: string;
   LProto: string;
+  LQuery: string;
+  LAddParam: String;
 begin
   // Find relevant proxy headers
 
@@ -56,6 +58,8 @@ begin
   LHost := Context.Request.Headers.Get('X-Forwarded-Host');
   LHostAlternative := Context.Request.Headers.Get('X-Forward-Host');
 
+  LQuery := Context.Request.Uri.OriginalQuery;
+
   if LHost > '' then
   begin
     // nginx/Apache
@@ -72,10 +76,24 @@ begin
   if LHost > '' then
   begin
     Context.Request.RawUri := LProto + LHost;
+    Context.Request.RawUri := Context.Request.RawUri + LQuery;
   end;
 
-//  LHeaders := TEncoding.ASCII.GetBytes(Context.Request.Headers.RawWideHeaders);
-//  Context.Request.Headers.RawWideHeaders := TEncoding.Default.GetString(LHeaders);
+  if LQuery = '' then
+  begin
+    LAddParam := '?';
+  end
+  else
+  begin
+    LAddParam := '&';
+  end;
+
+  Context.Request.RawUri := Context.Request.RawUri + LAddParam + 'ExcludeEntities=true';
+
+
+
+  // LHeaders := TEncoding.ASCII.GetBytes(Context.Request.Headers.RawWideHeaders);
+  // Context.Request.Headers.RawWideHeaders := TEncoding.Default.GetString(LHeaders);
 
   Next(Context);
 end;
