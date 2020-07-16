@@ -88,10 +88,6 @@ begin
     LAddParam := '&';
   end;
 
-  Context.Request.RawUri := Context.Request.RawUri + LAddParam + 'ExcludeEntities=true';
-
-
-
   // LHeaders := TEncoding.ASCII.GetBytes(Context.Request.Headers.RawWideHeaders);
   // Context.Request.Headers.RawWideHeaders := TEncoding.Default.GetString(LHeaders);
 
