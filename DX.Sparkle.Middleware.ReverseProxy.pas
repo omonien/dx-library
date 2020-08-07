@@ -23,6 +23,9 @@ type
 
 implementation
 
+uses
+  Sparkle.Http.Headers;
+
 { TReverseProxyMiddleware }
 
 procedure TReverseProxyMiddleware.ProcessRequest(
@@ -32,9 +35,13 @@ var
   LHost: string;
   LHostAlternative: string;
   LFor: string;
-  LProto: string;
+  LScheme: string;
   LQuery: string;
   LAddParam: String;
+  LPath: string;
+  LHeaders: THttpHeaders;
+  LxPath: string;
+  i: Integer;
 begin
   // Find relevant proxy headers
 
@@ -59,37 +66,66 @@ begin
   LHostAlternative := Context.Request.Headers.Get('X-Forward-Host');
 
   LQuery := Context.Request.Uri.OriginalQuery;
+  LScheme := Context.Request.Uri.Scheme;
+  LPath := Context.Request.Uri.Path;
+  LHeaders := Context.Request.Headers;
 
   if LHost > '' then
   begin
     // nginx/Apache
     LFor := Context.Request.Headers.Get('X-Forwarded-For');
-    LProto := Context.Request.Headers.Get('X-Forwarded-Proto');
+    LScheme := Context.Request.Headers.Get('X-Forwarded-Proto');
   end
   else if LHostAlternative > '' then
   begin
     // Alternative
     LHost := LHostAlternative;
     LFor := Context.Request.Headers.Get('X-Forward-For');
-    LProto := Context.Request.Headers.Get('X-Forward-Proto');
+    LScheme := Context.Request.Headers.Get('X-Forward-Proto');
   end;
+
+  //Todo: PVP spezifischen Code konfigurierbar machen. Nur generische Proxy Regeln allgemein gültig verarbeiten
+  LHeaders.GetIfExists('X-PVP-ORIG-SCHEME', LScheme);
+  LHeaders.GetIfExists('X-PVP-ORIG-HOST', LHost);
+
+  LxPath := '';
+  LHeaders.GetIfExists('X-PVP-ORIG-URI', LxPath);
+  if LxPath > '' then
+  begin
+    // If there is no prefix/proxy-LPath such as /ProxyPath/OriginalPath, then we just take the original LPath
+    if LxPath.ToLower.StartsWith(LPath.ToLower) or LxPath.IsEmpty then
+    begin
+      LxPath := LPath;
+    end
+    else
+    begin
+      // otherwise lets isolate the prefix
+      i := LxPath.ToLower.IndexOf(LPath.ToLower);
+      LxPath := LxPath.Remove(i);
+      LxPath := LxPath + LPath;
+    end;
+
+    if not LxPath.StartsWith('/') then
+    begin
+      LxPath := '/' + LxPath;
+    end;
+    if not LxPath.EndsWith('/') then
+    begin
+      LxPath := LxPath + '/';
+    end;
+
+  end;
+
+  if not LScheme.EndsWith('://') then
+  begin
+    LScheme := LScheme + '://';
+  end;
+
+
   if LHost > '' then
   begin
-    Context.Request.RawUri := LProto + LHost;
-    Context.Request.RawUri := Context.Request.RawUri + LQuery;
+    Context.Request.RawUri := LScheme + LHost + LPath + LQuery;
   end;
-
-  if LQuery = '' then
-  begin
-    LAddParam := '?';
-  end
-  else
-  begin
-    LAddParam := '&';
-  end;
-
-  // LHeaders := TEncoding.ASCII.GetBytes(Context.Request.Headers.RawWideHeaders);
-  // Context.Request.Headers.RawWideHeaders := TEncoding.Default.GetString(LHeaders);
 
   Next(Context);
 end;
