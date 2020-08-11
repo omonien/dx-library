@@ -126,7 +126,6 @@ begin
   begin
     Context.Request.RawUri := LScheme + LHost + LPath + LQuery;
   end;
-
   Next(Context);
 end;
 
