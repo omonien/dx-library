@@ -24,7 +24,7 @@ type
 implementation
 
 uses
-  Sparkle.Http.Headers;
+  Sparkle.Http.Headers, ELKE.Server.Logger, ELKE.Classes.Logging;
 
 { TReverseProxyMiddleware }
 
@@ -84,7 +84,7 @@ begin
     LScheme := Context.Request.Headers.Get('X-Forward-Proto');
   end;
 
-  //Todo: PVP spezifischen Code konfigurierbar machen. Nur generische Proxy Regeln allgemein gültig verarbeiten
+  // Todo: PVP spezifischen Code konfigurierbar machen. Nur generische Proxy Regeln allgemein gültig verarbeiten
   LHeaders.GetIfExists('X-PVP-ORIG-SCHEME', LScheme);
   LHeaders.GetIfExists('X-PVP-ORIG-HOST', LHost);
 
@@ -92,6 +92,7 @@ begin
   LHeaders.GetIfExists('X-PVP-ORIG-URI', LxPath);
   if LxPath > '' then
   begin
+    ELKELog('X-PVP-ORIG-URI: ' + LxPath, TLoglevel.Trace);
     // If there is no prefix/proxy-LPath such as /ProxyPath/OriginalPath, then we just take the original LPath
     if LxPath.ToLower.StartsWith(LPath.ToLower) or LxPath.IsEmpty then
     begin
@@ -113,7 +114,11 @@ begin
     begin
       LxPath := LxPath + '/';
     end;
+  end;
 
+  if LxPath > '' then
+  begin
+    LPath := LxPath;
   end;
 
   if not LScheme.EndsWith('://') then
@@ -121,10 +126,11 @@ begin
     LScheme := LScheme + '://';
   end;
 
-
   if LHost > '' then
   begin
     Context.Request.RawUri := LScheme + LHost + LPath + LQuery;
+
+    ELKELog('Proxy URI Rewrite: ' + Context.Request.RawUri, TLoglevel.Trace);
   end;
   Next(Context);
 end;
