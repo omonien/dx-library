@@ -40,8 +40,9 @@ var
   LAddParam: String;
   LPath: string;
   LHeaders: THttpHeaders;
-  LxPath: string;
+  LOrigPath: string;
   i: Integer;
+  LRequestLog: TLogItemRequest;
 begin
   // Find relevant proxy headers
 
@@ -61,6 +62,16 @@ begin
   // X-Forward-Proto
   // X-Forward-For
   // X-Forward-Host
+
+
+
+
+  ELKELog('Processing incomming request ...', TLogLevel.Trace);
+
+  LRequestLog := TLogItemRequest.Create(Context.Request);
+  TElkeLogger.Default.Log(LRequestLog);
+
+  ELKELog('Proxy before: ' + Context.Request.RawUri, TLogLevel.Trace);
 
   LHost := Context.Request.Headers.Get('X-Forwarded-Host');
   LHostAlternative := Context.Request.Headers.Get('X-Forward-Host');
@@ -88,38 +99,26 @@ begin
   LHeaders.GetIfExists('X-PVP-ORIG-SCHEME', LScheme);
   LHeaders.GetIfExists('X-PVP-ORIG-HOST', LHost);
 
-  LxPath := '';
-  LHeaders.GetIfExists('X-PVP-ORIG-URI', LxPath);
-  if LxPath > '' then
+  //PVP specific header, that holds the original path as issued by client
+  LOrigPath := '';
+  LHeaders.GetIfExists('X-PVP-ORIG-URI', LOrigPath);
+  //make sure LorigPath is "clean"
+  if LOrigPath > '' then
   begin
-    ELKELog('X-PVP-ORIG-URI: ' + LxPath, TLoglevel.Trace);
-    // If there is no prefix/proxy-LPath such as /ProxyPath/OriginalPath, then we just take the original LPath
-    if LxPath.ToLower.StartsWith(LPath.ToLower) or LxPath.IsEmpty then
+    LOrigPath := LOrigPath.Trim;
+    ELKELog('X-PVP-ORIG-URI: ' + LOrigPath, TLogLevel.Trace);
+    if not LOrigPath.StartsWith('/') then
     begin
-      LxPath := LPath;
-    end
-    else
-    begin
-      // otherwise lets isolate the prefix
-      i := LxPath.ToLower.IndexOf(LPath.ToLower);
-      LxPath := LxPath.Remove(i);
-      LxPath := LxPath + LPath;
+      LOrigPath := '/' + LOrigPath;
     end;
-
-    if not LxPath.StartsWith('/') then
+    if not LOrigPath.EndsWith('/') then
     begin
-      LxPath := '/' + LxPath;
+      LOrigPath := LOrigPath + '/';
     end;
-    if not LxPath.EndsWith('/') then
-    begin
-      LxPath := LxPath + '/';
-    end;
+    LPath := LOrigPath;
   end;
 
-  if LxPath > '' then
-  begin
-    LPath := LxPath;
-  end;
+
 
   if not LScheme.EndsWith('://') then
   begin
@@ -129,9 +128,9 @@ begin
   if LHost > '' then
   begin
     Context.Request.RawUri := LScheme + LHost + LPath + LQuery;
-
-    ELKELog('Proxy URI Rewrite: ' + Context.Request.RawUri, TLoglevel.Trace);
   end;
+
+  ELKELog('Proxy after: ' + Context.Request.RawUri, TLogLevel.Trace);
   Next(Context);
 end;
 
