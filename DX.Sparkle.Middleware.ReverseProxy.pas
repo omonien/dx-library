@@ -106,15 +106,11 @@ begin
   if LOrigPath > '' then
   begin
     LOrigPath := LOrigPath.Trim;
-    ELKELog('X-PVP-ORIG-URI: ' + LOrigPath, TLogLevel.Trace);
     if not LOrigPath.StartsWith('/') then
     begin
       LOrigPath := '/' + LOrigPath;
     end;
-    if not LOrigPath.EndsWith('/') then
-    begin
-      LOrigPath := LOrigPath + '/';
-    end;
+     ELKELog('X-PVP-ORIG-URI: ' + LOrigPath, TLogLevel.Trace);
     LPath := LOrigPath;
   end;
 
@@ -128,6 +124,7 @@ begin
   if LHost > '' then
   begin
     Context.Request.RawUri := LScheme + LHost + LPath + LQuery;
+
   end;
 
   ELKELog('Proxy after: ' + Context.Request.RawUri, TLogLevel.Trace);
