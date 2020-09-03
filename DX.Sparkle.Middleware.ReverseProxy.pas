@@ -67,65 +67,69 @@ begin
 
   LRequestLog := TLogItemRequest.Create(Context.Request);
   TElkeLogger.Default.Log(LRequestLog);
-  Next(Context);
-  exit;
-
-  ELKELog('Proxy before: ' + Context.Request.RawUri, TLogLevel.Trace);
-
-  LHost := Context.Request.Headers.Get('X-Forwarded-Host');
-  LHostAlternative := Context.Request.Headers.Get('X-Forward-Host');
-
-  LQuery := Context.Request.Uri.OriginalQuery;
-  LScheme := Context.Request.Uri.Scheme;
-  LPath := Context.Request.Uri.Path;
-  LHeaders := Context.Request.Headers;
-
-  if LHost > '' then
+  if not Context.Request.RawUri.ToLower.Contains('swagger') then
   begin
-    // nginx/Apache
-    LFor := Context.Request.Headers.Get('X-Forwarded-For');
-    LScheme := Context.Request.Headers.Get('X-Forwarded-Proto');
+    Next(Context);
   end
-  else if LHostAlternative > '' then
+  else
   begin
-    // Alternative
-    LHost := LHostAlternative;
-    LFor := Context.Request.Headers.Get('X-Forward-For');
-    LScheme := Context.Request.Headers.Get('X-Forward-Proto');
-  end;
+    ELKELog('Swagger/Proxy before: ' + Context.Request.RawUri, TLogLevel.Trace);
 
-  // Todo: PVP spezifischen Code konfigurierbar machen. Nur generische Proxy Regeln allgemein gültig verarbeiten
-  LHeaders.GetIfExists('X-PVP-ORIG-SCHEME', LScheme);
-  LHeaders.GetIfExists('X-PVP-ORIG-HOST', LHost);
+    LHost := Context.Request.Headers.Get('X-Forwarded-Host');
+    LHostAlternative := Context.Request.Headers.Get('X-Forward-Host');
 
-  // PVP specific header, that holds the original path as issued by client
-  LOrigPath := '';
-  LHeaders.GetIfExists('X-PVP-ORIG-URI', LOrigPath);
-  // make sure LorigPath is "clean"
-  if LOrigPath > '' then
-  begin
-    LOrigPath := LOrigPath.Trim;
-    if not LOrigPath.StartsWith('/') then
+    LQuery := Context.Request.Uri.OriginalQuery;
+    LScheme := Context.Request.Uri.Scheme;
+    LPath := Context.Request.Uri.Path;
+    LHeaders := Context.Request.Headers;
+
+    if LHost > '' then
     begin
-      LOrigPath := '/' + LOrigPath;
+      // nginx/Apache
+      LFor := Context.Request.Headers.Get('X-Forwarded-For');
+      LScheme := Context.Request.Headers.Get('X-Forwarded-Proto');
+    end
+    else if LHostAlternative > '' then
+    begin
+      // Alternative
+      LHost := LHostAlternative;
+      LFor := Context.Request.Headers.Get('X-Forward-For');
+      LScheme := Context.Request.Headers.Get('X-Forward-Proto');
     end;
-    ELKELog('X-PVP-ORIG-URI: ' + LOrigPath, TLogLevel.Trace);
-    LPath := LOrigPath;
+
+    // Todo: PVP spezifischen Code konfigurierbar machen. Nur generische Proxy Regeln allgemein gültig verarbeiten
+    LHeaders.GetIfExists('X-PVP-ORIG-SCHEME', LScheme);
+    LHeaders.GetIfExists('X-PVP-ORIG-HOST', LHost);
+
+    // PVP specific header, that holds the original path as issued by client
+    LOrigPath := '';
+    LHeaders.GetIfExists('X-PVP-ORIG-URI', LOrigPath);
+    // make sure LorigPath is "clean"
+    if LOrigPath > '' then
+    begin
+      LOrigPath := LOrigPath.Trim;
+      if not LOrigPath.StartsWith('/') then
+      begin
+        LOrigPath := '/' + LOrigPath;
+      end;
+      ELKELog('X-PVP-ORIG-URI: ' + LOrigPath, TLogLevel.Trace);
+      LPath := LOrigPath;
+    end;
+
+    if not LScheme.EndsWith('://') then
+    begin
+      LScheme := LScheme + '://';
+    end;
+
+    if LHost > '' then
+    begin
+      Context.Request.RawUri := LScheme + LHost + LPath + LQuery;
+
+    end;
+
+    ELKELog('Swagger/Proxy after: ' + Context.Request.RawUri, TLogLevel.Trace);
+    Next(Context);
   end;
-
-  if not LScheme.EndsWith('://') then
-  begin
-    LScheme := LScheme + '://';
-  end;
-
-  if LHost > '' then
-  begin
-    Context.Request.RawUri := LScheme + LHost + LPath + LQuery;
-
-  end;
-
-  ELKELog('Proxy after: ' + Context.Request.RawUri, TLogLevel.Trace);
-  Next(Context);
 end;
 
 end.
