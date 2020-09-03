@@ -63,13 +63,12 @@ begin
   // X-Forward-For
   // X-Forward-Host
 
-
-
-
   ELKELog('Processing incomming request ...', TLogLevel.Trace);
 
   LRequestLog := TLogItemRequest.Create(Context.Request);
   TElkeLogger.Default.Log(LRequestLog);
+  Next(Context);
+  exit;
 
   ELKELog('Proxy before: ' + Context.Request.RawUri, TLogLevel.Trace);
 
@@ -99,10 +98,10 @@ begin
   LHeaders.GetIfExists('X-PVP-ORIG-SCHEME', LScheme);
   LHeaders.GetIfExists('X-PVP-ORIG-HOST', LHost);
 
-  //PVP specific header, that holds the original path as issued by client
+  // PVP specific header, that holds the original path as issued by client
   LOrigPath := '';
   LHeaders.GetIfExists('X-PVP-ORIG-URI', LOrigPath);
-  //make sure LorigPath is "clean"
+  // make sure LorigPath is "clean"
   if LOrigPath > '' then
   begin
     LOrigPath := LOrigPath.Trim;
@@ -110,11 +109,9 @@ begin
     begin
       LOrigPath := '/' + LOrigPath;
     end;
-     ELKELog('X-PVP-ORIG-URI: ' + LOrigPath, TLogLevel.Trace);
+    ELKELog('X-PVP-ORIG-URI: ' + LOrigPath, TLogLevel.Trace);
     LPath := LOrigPath;
   end;
-
-
 
   if not LScheme.EndsWith('://') then
   begin
