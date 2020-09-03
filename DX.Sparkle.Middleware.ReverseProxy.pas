@@ -44,6 +44,7 @@ var
   LOrigPath: string;
   LRequestLog: TLogItemRequest;
   LProcessedUri: string;
+  LBody: string;
   // LBasePath: string;
   // LRelativePath: string;
 begin
@@ -70,6 +71,15 @@ begin
   LRequestLog := TLogItemRequest.Create(Context.Request);
   ELKELog(LRequestLog);
   ELKELog('Proxy processing before: ' + Context.Request.Method + ' : ' + Context.Request.RawUri, TLogLevel.Trace);
+
+  if Length(Context.Request.Content) > 0 then
+  begin
+    LBody := TEncoding.UTF8.GetString(Context.Request.Content);
+    if LBody > '' then
+    begin
+      ELKELog('Body: ' + LBody, TLogLevel.Trace);
+    end;
+  end;
 
   (*
     LHeaders := Context.Request.Headers;
