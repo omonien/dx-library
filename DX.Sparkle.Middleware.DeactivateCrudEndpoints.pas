@@ -22,27 +22,38 @@ type
 
 implementation
 
+uses
+  System.Net.UrlClient;
+
 { TDeactivateCrudEndpointsMiddleware }
 
 procedure TDeactivateCrudEndpointsMiddleware.ProcessRequest(
   Context: THttpServerContext;
   Next:    THttpServerProc);
 var
-  LAddParam: string;
-  LQuery: string;
+  LUri: TURI;
+  LParam: TNameValuePair;
+  i: Integer;
 begin
-  LQuery := Context.Request.Uri.OriginalQuery;
-
-  if LQuery = '' then
+  // Ensure "ExcludeEntities=true" with current swaggerui request
+  if Context.Request.RawUri.ToLower.Contains('swaggerui') then
   begin
-    LAddParam := '?';
-  end
-  else
-  begin
-    LAddParam := '&';
+    LUri := TURI.Create(Context.Request.RawUri);
+    // change existing
+    for i := Low(LUri.Params) to High(LUri.Params) do
+    begin
+      if LUri.Params[i].Name.Trim.ToLower = 'excludeentities' then
+      begin
+        LParam.Value := 'true'
+      end;
+    end;
+    // add if not exists
+    if not Context.Request.RawUri.ToLower.Contains('excludeentities') then
+    begin
+      LUri.AddParameter('ExcludeEntities', 'true');
+    end;
+    Context.Request.RawUri := LUri.ToString;
   end;
-
-  Context.Request.RawUri := Context.Request.RawUri + LAddParam + 'ExcludeEntities=true';
   Next(Context);
 end;
 
