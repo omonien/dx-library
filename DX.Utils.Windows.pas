@@ -9,12 +9,13 @@ procedure OpenBrowser(const AUrl: string);
 
 function GetExeBuildTimestamp: TDateTime;
 
-function GetExeVersion: String;
+function GetExeVersion: String; overload;
+function GetExeVersion(const AFilename: string): String; overload;
 
 implementation
 
 uses
-  System.DateUtils,
+  System.DateUtils, System.IOUtils,
   Winapi.Windows, Winapi.ShellAPI;
 
 procedure OpenBrowser(const AUrl: string);
@@ -33,23 +34,34 @@ end;
 
 function GetExeVersion: String;
 var
-  LExeFilename: String;
+  LExeFilename: string;
+begin
+  LExeFilename := ParamStr(0);
+  Result := GetExeVersion(LExeFilename);
+end;
+
+function GetExeVersion(const AFilename: string): String;
+var
+
   LVersionInfoSize: DWORD;
   LHandle: DWORD;
   LBuffer: Pointer;
   LFileInfo: Pointer;
   LVersionInfo: array [1 .. 4] of Word;
+  LFilename: string;
 begin
   Result := '';
-  LExeFilename := ParamStr(0);
+  LFilename := AFilename.Trim;
+  if not TFile.Exists(AFilename) then
+    raise EFileNotFoundException.CreateFmt('%s not found!', [LFilename]);
 
-  LVersionInfoSize := GetFileVersionInfoSize(PChar(LExeFilename), LHandle);
+  LVersionInfoSize := GetFileVersionInfoSize(PChar(LFilename), LHandle);
   // if size is zero, then there is no version info in the exe
   if (LVersionInfoSize > 0) then
   begin
     GetMem(LBuffer, LVersionInfoSize);
     try
-      GetFileVersionInfo(PChar(LExeFilename), 0, LVersionInfoSize, LBuffer);
+      GetFileVersionInfo(PChar(LFilename), 0, LVersionInfoSize, LBuffer);
       VerQueryValue(LBuffer, '\', LFileInfo, LHandle);
 
       LVersionInfo[1] := HiWord(PVSFixedFileInfo(LFileInfo)^.dwFileVersionMS);
