@@ -100,11 +100,13 @@ begin
     if LHandle then
       try
         repeat
+          //Todo: check if StdOut really is Ansichar only, as assumed here. Probably not
           LWasOK := ReadFile(LStdOutPipeRead, LBuffer, 255, LBytesRead, nil);
           if LBytesRead > 0 then
           begin
             LBuffer[LBytesRead] := #0;
-            result := result + LBuffer;
+            //todo: get string from Encoding
+            result := result + String(LBuffer);
           end;
         until not LWasOK or (LBytesRead = 0);
         WaitForSingleObject(LProcessInfo.hProcess, INFINITE);
