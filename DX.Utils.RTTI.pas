@@ -34,6 +34,30 @@ type
     function HasAttribute(AAttribute: TClass): boolean;
     function AttributeValue(AAttribute: TClass): string;
     function GetAttribute(AAttribute: TClass): TCustomAttribute;
+
+    procedure CopyFrom(ASource: TObject);
+
+  end;
+
+  TRTTIPropertyHelper = class helper for TRTTIProperty
+  public
+    /// <summary>
+    /// Sets the value of the field, specified by AFieldName. Works with
+    /// records!
+    /// </summary>
+    /// <param name="AInstance">
+    /// The containing instance
+    /// </param>
+    /// <param name="AFieldName">
+    /// Name of the field variable to set
+    /// </param>
+    /// <param name="AValue">
+    /// A TValue containing the value to be set
+    /// </param>
+    procedure SetFieldValue(
+      AInstance:        Pointer;
+      const AFieldName: string;
+      AValue:           TValue);
   end;
 
   TClassConstructor = class
@@ -43,7 +67,7 @@ type
     /// calling its parameter-less constructor. If T has no such constructor,
     /// then an EConstructorNotFound exception is raised.
     /// </summary>
-    class function GetConstructor(AClass: TRttiType): TRttiMethod;
+    class function GetConstructor(AClass: TRTTIType): TRttiMethod;
   public
     /// <summary>
     /// Creates and returns an instance of T
@@ -86,7 +110,7 @@ begin
   end;
 end;
 
-class function TClassConstructor.GetConstructor(AClass: TRttiType): TRttiMethod;
+class function TClassConstructor.GetConstructor(AClass: TRTTIType): TRttiMethod;
 var
   LMethods: TArray<TRttiMethod>;
   LMethod: TRttiMethod;
@@ -115,7 +139,7 @@ var
   LInstance: TValue;
   LContext: TRttiContext;
   // LClass: TRttiType;
-  LClassType: TRttiType;
+  LClassType: TRTTIType;
   LConstructor: TRttiMethod;
 begin
   LContext := TRttiContext.Create();
@@ -132,9 +156,9 @@ end;
 function TObjectHelper.ListProperties(const AExcludes: TArray<string>): StringList;
 var
   LContext: TRttiContext;
-  LType: TRttiType;
-  LProperties: TArray<TRttiProperty>;
-  LProperty: TRttiProperty;
+  LType: TRTTIType;
+  LProperties: TArray<TRTTIProperty>;
+  LProperty: TRTTIProperty;
 begin
   Result.Clear;
   LContext := TRttiContext.Create;
@@ -164,15 +188,55 @@ begin
     LAttribute := StringValueAttribute(GetAttribute(AAttribute));
     if Assigned(LAttribute) then
     begin
-      result := LAttribute.Value;
+      Result := LAttribute.Value;
     end;
+  end;
+end;
+
+procedure TObjectHelper.CopyFrom(ASource: TObject);
+var
+  LContext: TRttiContext;
+  LSelfType: TRTTIType;
+  LSelfProperties: TArray<TRTTIProperty>;
+  LSelfProperty: TRTTIProperty;
+  LSourceType: TRTTIType;
+  LSourceProperties: TArray<TRTTIProperty>;
+  LSourceProperty: TRTTIProperty;
+  LSourceValue: TValue;
+
+begin
+  LContext := TRttiContext.Create;
+  try
+    LSourceType := LContext.GetType(ASource.ClassType);
+    LSourceProperties := LSourceType.GetProperties;
+    LSelfType := LContext.GetType(self.ClassType);
+    LSelfProperties := LSelfType.GetProperties;
+
+    for LSelfProperty in LSelfProperties do
+    begin
+      // Find in source and copy if type matches
+      for LSourceProperty in LSourceProperties do
+      begin
+        if (LSourceProperty.IsWritable)
+          and (LSourceProperty.Name = LSelfProperty.Name)
+          and (LSourceProperty.PropertyType = LSelfProperty.PropertyType)
+        then
+        begin
+          LSourceValue := LSourceProperty.GetValue(ASource);
+          LSelfProperty.SetValue(self, LSourceValue);
+          break;
+        end;
+      end;
+    end;
+  finally
+    LContext.Free;
   end;
 end;
 
 function TObjectHelper.GetAttribute(AAttribute: TClass): TCustomAttribute;
 var
   LContext: TRttiContext;
-  LConfigType: TRttiType;
+  LConfigType: TRTTIType;
   LAttributes: TArray<TCustomAttribute>;
   LAttribute: TCustomAttribute;
 begin
@@ -197,7 +261,7 @@ end;
 function TObjectHelper.HasAttribute(AAttribute: TClass): boolean;
 var
   LContext: TRttiContext;
-  LConfigType: TRttiType;
+  LConfigType: TRTTIType;
   LAttributes: TArray<TCustomAttribute>;
   LAttribute: TCustomAttribute;
 begin
@@ -222,6 +286,28 @@ end;
 function TObjectHelper.ListProperties: StringList;
 begin
   Result := self.ListProperties([]);
+end;
+
+{ TRTTIPropertyHelper }
+
+procedure TRTTIPropertyHelper.SetFieldValue(
+  AInstance:        Pointer;
+  const AFieldName: string;
+  AValue:           TValue);
+var
+  LField: TRTTIField;
+  LValue: TValue;
+begin
+  //The value of the property, which is considered a record
+  LValue := self.GetValue(AInstance);
+  //A field of the record
+  LField := self.PropertyType.GetField(AFieldName);
+  if LField = nil then
+    raise EInvalidCast.Create('Invalid type - field "%s" not found!');
+  // set the field's value
+  LField.SetValue(LValue.GetReferenceToRawData, AValue);
+  // finally set the property value with the modified field value(s)
+  self.SetValue(AInstance, LValue);
 end;
 
 end.
