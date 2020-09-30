@@ -214,17 +214,20 @@ begin
 
     for LSelfProperty in LSelfProperties do
     begin
-      // Find in source and copy if type matches
-      for LSourceProperty in LSourceProperties do
+      if LSelfProperty.IsWritable then
       begin
-        if (LSourceProperty.IsWritable)
-          and (LSourceProperty.Name = LSelfProperty.Name)
-          and (LSourceProperty.PropertyType = LSelfProperty.PropertyType)
-        then
+        // Find in source and copy if type matches
+        for LSourceProperty in LSourceProperties do
         begin
-          LSourceValue := LSourceProperty.GetValue(ASource);
-          LSelfProperty.SetValue(self, LSourceValue);
-          break;
+          if (LSourceProperty.IsReadable)
+            and (LSourceProperty.Name = LSelfProperty.Name)
+            and (LSourceProperty.PropertyType = LSelfProperty.PropertyType)
+          then
+          begin
+            LSourceValue := LSourceProperty.GetValue(ASource);
+            LSelfProperty.SetValue(self, LSourceValue);
+            break;
+          end;
         end;
       end;
     end;
@@ -298,9 +301,9 @@ var
   LField: TRTTIField;
   LValue: TValue;
 begin
-  //The value of the property, which is considered a record
+  // The value of the property, which is considered a record
   LValue := self.GetValue(AInstance);
-  //A field of the record
+  // A field of the record
   LField := self.PropertyType.GetField(AFieldName);
   if LField = nil then
     raise EInvalidCast.Create('Invalid type - field "%s" not found!');
