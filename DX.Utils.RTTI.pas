@@ -19,7 +19,7 @@ type
     /// Lists all properties of the given class instance as 'name = value'
     /// pairs.
     /// </summary>
-    /// <param name="AExclude">
+    /// <param name="AExcludes">
     /// Excludes all pairs that match an item in AExcludes
     /// </param>
     function ListProperties(const AExcludes: TArray<string>): StringList; overload;
@@ -314,3 +314,4 @@ begin
 end;
 
 end.
+
