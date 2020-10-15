@@ -9,13 +9,20 @@ procedure OpenBrowser(const AUrl: string);
 
 function GetExeBuildTimestamp: TDateTime;
 
-function GetExeVersion: String; overload;
-function GetExeVersion(const AFilename: string): String; overload;
+function GetExeVersion(const AFormat: string = '%d.%d.%d.%d'): String; overload;
+function GetExeVersion(
+  const AFilename: string;
+  const AFormat:   string): String; overload;
 
-function ExecuteProcess(const AFilename, AParams: string; AFolder: string; AWaitUntilTerminated: boolean;
-  var ExitCode: integer): boolean;
+function ExecuteProcess(
+  const AFilename, AParams: string;
+  AFolder:                  string;
+  AWaitUntilTerminated:     boolean;
+  var ExitCode:             integer): boolean;
 
-function ExecuteCommand(ACommandLine: string; AWork: string = 'C:\'): string;
+function ExecuteCommand(
+  ACommandLine: string;
+  AWork:        string = 'C:\'): string;
 
 implementation
 
@@ -23,9 +30,11 @@ uses
   System.DateUtils, System.IOUtils,
   Winapi.Windows, Winapi.ShellAPI;
 
-function ExecuteProcess(const AFilename, AParams: string; AFolder: string;
-  AWaitUntilTerminated: boolean;
-  var ExitCode: integer): boolean;
+function ExecuteProcess(
+  const AFilename, AParams: string;
+  AFolder:                  string;
+  AWaitUntilTerminated:     boolean;
+  var ExitCode:             integer): boolean;
 var
   LCmdLine: string;
   LWorkingDir: PChar;
@@ -66,7 +75,9 @@ begin
   end;
 end;
 
-function ExecuteCommand(ACommandLine: string; AWork: string = 'C:\'): string;
+function ExecuteCommand(
+  ACommandLine: string;
+  AWork:        string = 'C:\'): string;
 var
   LSecurityAttributes: TSecurityAttributes;
   LStartupInfo: TStartupInfo;
@@ -100,12 +111,12 @@ begin
     if LHandle then
       try
         repeat
-          //Todo: check if StdOut really is Ansichar only, as assumed here. Probably not
+          // Todo: check if StdOut really is Ansichar only, as assumed here. Probably not
           LWasOK := ReadFile(LStdOutPipeRead, LBuffer, 255, LBytesRead, nil);
           if LBytesRead > 0 then
           begin
             LBuffer[LBytesRead] := #0;
-            //todo: get string from Encoding
+            // todo: get string from Encoding
             result := result + String(LBuffer);
           end;
         until not LWasOK or (LBytesRead = 0);
@@ -133,15 +144,17 @@ begin
   result := TTimeZone.Local.ToLocalTime(LTimeStampUTC);
 end;
 
-function GetExeVersion: String;
+function GetExeVersion(const AFormat: string = '%d.%d.%d.%d'): String;
 var
   LExeFilename: string;
 begin
   LExeFilename := ParamStr(0);
-  result := GetExeVersion(LExeFilename);
+  result := GetExeVersion(LExeFilename, AFormat);
 end;
 
-function GetExeVersion(const AFilename: string): String;
+function GetExeVersion(
+  const AFilename: string;
+  const AFormat:   string): String;
 var
 
   LVersionInfoSize: DWORD;
@@ -150,8 +163,10 @@ var
   LFileInfo: Pointer;
   LVersionInfo: array [1 .. 4] of Word;
   LFilename: string;
+  LFormat: string;
 begin
   result := '';
+
   LFilename := AFilename.Trim;
   if not TFile.Exists(AFilename) then
     raise EFileNotFoundException.CreateFmt('%s not found!', [LFilename]);
@@ -172,7 +187,13 @@ begin
     finally
       FreeMem(LBuffer);
     end;
-    result := Format('%d.%d.%d.%d', [LVersionInfo[1], LVersionInfo[2], LVersionInfo[3], LVersionInfo[4]]);
+    if AFormat = '' then
+    begin
+      LFormat := '%d.%d.%d.%d';
+    end else begin
+      LFormat := AFormat;
+    end;
+    result := Format(LFormat, [LVersionInfo[1], LVersionInfo[2], LVersionInfo[3], LVersionInfo[4]]);
   end;
 end;
 
