@@ -5,7 +5,7 @@ interface
 uses
   System.Classes, System.SysUtils;
 
-procedure OpenBrowser(const AUrl: string);
+procedure OpenBrowser(const AUrl: string; AActivate: boolean = true);
 
 function GetExeBuildTimestamp: TDateTime;
 
@@ -23,9 +23,7 @@ function GetExeVersionFmt(const AFormat: string): String; overload;
 /// %d.%d.%d.%d = 1.2.3.4
 /// %d.%d = 1.2
 /// </Summary>
-function GetExeVersionFmt(
-  const AFilename: string;
-  const AFormat: string): String; overload;
+function GetExeVersionFmt(const AFilename: string; const AFormat: string): String; overload;
 
 /// <Summary>
 /// Retrieves the version number from the current process.
@@ -37,15 +35,10 @@ function GetExeVersion: String; overload;
 /// </Summary>
 function GetExeVersion(const AFilename: string): String; overload;
 
-function ExecuteProcess(
-  const AFilename, AParams: string;
-  AFolder: string;
-  AWaitUntilTerminated: boolean;
+function ExecuteProcess(const AFilename, AParams: string; AFolder: string; AWaitUntilTerminated: boolean;
   var ExitCode: integer): boolean;
 
-function ExecuteCommand(
-  ACommandLine: string;
-  AWork: string = 'C:\'): string;
+function ExecuteCommand(ACommandLine: string; AWork: string = 'C:\'): string;
 
 implementation
 
@@ -53,10 +46,7 @@ uses
   System.DateUtils, System.IOUtils,
   Winapi.Windows, Winapi.ShellAPI;
 
-function ExecuteProcess(
-  const AFilename, AParams: string;
-  AFolder: string;
-  AWaitUntilTerminated: boolean;
+function ExecuteProcess(const AFilename, AParams: string; AFolder: string; AWaitUntilTerminated: boolean;
   var ExitCode: integer): boolean;
 var
   LCmdLine: string;
@@ -98,9 +88,7 @@ begin
   end;
 end;
 
-function ExecuteCommand(
-  ACommandLine: string;
-  AWork: string = 'C:\'): string;
+function ExecuteCommand(ACommandLine: string; AWork: string = 'C:\'): string;
 var
   LSecurityAttributes: TSecurityAttributes;
   LStartupInfo: TStartupInfo;
@@ -127,9 +115,8 @@ begin
     LStartupInfo.hStdError := StdOutPipeWrite;
 
     LWorkDir := AWork;
-    LHandle := CreateProcess(nil, PChar('cmd.exe /C ' + ACommandLine),
-      nil, nil, true, 0, nil,
-      PChar(LWorkDir), LStartupInfo, LProcessInfo);
+    LHandle := CreateProcess(nil, PChar('cmd.exe /C ' + ACommandLine), nil, nil, true, 0, nil, PChar(LWorkDir),
+      LStartupInfo, LProcessInfo);
     CloseHandle(StdOutPipeWrite);
     if LHandle then
       try
@@ -153,9 +140,15 @@ begin
   end;
 end;
 
-procedure OpenBrowser(const AUrl: string);
+procedure OpenBrowser(const AUrl: string; AActivate: boolean = true);
 begin
-  ShellExecute(0, nil, PChar(AUrl), nil, nil, SW_SHOWNOACTIVATE);
+  var
+  LMode := SW_SHOWNORMAL;
+  if not AActivate then
+  begin
+    LMode := SW_SHOWNOACTIVATE;
+  end;
+  ShellExecute(0, nil, PChar(AUrl), nil, nil, LMode);
 end;
 
 function GetExeBuildTimestamp: TDateTime;
@@ -185,9 +178,7 @@ begin
   result := GetExeVersionFmt(LExeFilename, AFormat);
 end;
 
-function GetExeVersionFmt(
-  const AFilename: string;
-  const AFormat: string): String;
+function GetExeVersionFmt(const AFilename: string; const AFormat: string): String;
 var
 
   LVersionInfoSize: DWORD;
