@@ -37,15 +37,19 @@ begin
   begin
     var
     LResult := TList<T>.Create;
-    for var LItem in ASource do
-    begin
-      if not LResult.Contains(LItem) then
+    try
+      for var LItem in ASource do
       begin
-        LResult.Add(LItem);
+        if not LResult.Contains(LItem) then
+        begin
+          LResult.Add(LItem);
+        end;
       end;
+      ASource.Clear;
+      ASource.AddRange(LResult);
+    finally
+      FreeAndNil(ASource);
     end;
-    ASource.Clear;
-    ASource.AddRange(LResult);
   end;
 end;
 
