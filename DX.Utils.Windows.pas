@@ -5,24 +5,40 @@ interface
 uses
   System.Classes, System.SysUtils;
 
-procedure OpenBrowser(const AUrl: string);
+procedure OpenBrowser(const AUrl: string; AActivate: boolean = true);
 
 function GetExeBuildTimestamp: TDateTime;
 
-function GetExeVersion(const AFormat: string = '%d.%d.%d.%d'): String; overload;
-function GetExeVersion(
-  const AFilename: string;
-  const AFormat:   string): String; overload;
+/// <Summary>
+/// Retrieves the version number from the current process, using a format string.
+/// The format strings accepts up to four version parts. Eg:
+/// %d.%d.%d.%d = 1.2.3.4
+/// %d.%d = 1.2
+/// </Summary>
+function GetExeVersionFmt(const AFormat: string): String; overload;
 
-function ExecuteProcess(
-  const AFilename, AParams: string;
-  AFolder:                  string;
-  AWaitUntilTerminated:     boolean;
-  var ExitCode:             integer): boolean;
+/// <Summary>
+/// Retrieves the version number from the given file, using a format string.
+/// The format strings accepts up to four version parts. Eg:
+/// %d.%d.%d.%d = 1.2.3.4
+/// %d.%d = 1.2
+/// </Summary>
+function GetExeVersionFmt(const AFilename: string; const AFormat: string): String; overload;
 
-function ExecuteCommand(
-  ACommandLine: string;
-  AWork:        string = 'C:\'): string;
+/// <Summary>
+/// Retrieves the version number from the current process.
+/// </Summary>
+function GetExeVersion: String; overload;
+
+/// <Summary>
+/// Retrieves the version number from the given file.
+/// </Summary>
+function GetExeVersion(const AFilename: string): String; overload;
+
+function ExecuteProcess(const AFilename, AParams: string; AFolder: string; AWaitUntilTerminated: boolean;
+  var ExitCode: integer): boolean;
+
+function ExecuteCommand(ACommandLine: string; AWork: string = 'C:\'): string;
 
 implementation
 
@@ -30,11 +46,8 @@ uses
   System.DateUtils, System.IOUtils,
   Winapi.Windows, Winapi.ShellAPI;
 
-function ExecuteProcess(
-  const AFilename, AParams: string;
-  AFolder:                  string;
-  AWaitUntilTerminated:     boolean;
-  var ExitCode:             integer): boolean;
+function ExecuteProcess(const AFilename, AParams: string; AFolder: string; AWaitUntilTerminated: boolean;
+  var ExitCode: integer): boolean;
 var
   LCmdLine: string;
   LWorkingDir: PChar;
@@ -75,9 +88,7 @@ begin
   end;
 end;
 
-function ExecuteCommand(
-  ACommandLine: string;
-  AWork:        string = 'C:\'): string;
+function ExecuteCommand(ACommandLine: string; AWork: string = 'C:\'): string;
 var
   LSecurityAttributes: TSecurityAttributes;
   LStartupInfo: TStartupInfo;
@@ -104,9 +115,8 @@ begin
     LStartupInfo.hStdError := StdOutPipeWrite;
 
     LWorkDir := AWork;
-    LHandle := CreateProcess(nil, PChar('cmd.exe /C ' + ACommandLine),
-      nil, nil, true, 0, nil,
-      PChar(LWorkDir), LStartupInfo, LProcessInfo);
+    LHandle := CreateProcess(nil, PChar('cmd.exe /C ' + ACommandLine), nil, nil, true, 0, nil, PChar(LWorkDir),
+      LStartupInfo, LProcessInfo);
     CloseHandle(StdOutPipeWrite);
     if LHandle then
       try
@@ -130,9 +140,15 @@ begin
   end;
 end;
 
-procedure OpenBrowser(const AUrl: string);
+procedure OpenBrowser(const AUrl: string; AActivate: boolean = true);
 begin
-  ShellExecute(0, nil, PChar(AUrl), nil, nil, SW_SHOWNOACTIVATE);
+  var
+  LMode := SW_SHOWNORMAL;
+  if not AActivate then
+  begin
+    LMode := SW_SHOWNOACTIVATE;
+  end;
+  ShellExecute(0, nil, PChar(AUrl), nil, nil, LMode);
 end;
 
 function GetExeBuildTimestamp: TDateTime;
@@ -144,17 +160,25 @@ begin
   result := TTimeZone.Local.ToLocalTime(LTimeStampUTC);
 end;
 
-function GetExeVersion(const AFormat: string = '%d.%d.%d.%d'): String;
+function GetExeVersion: String; overload;
+begin
+  result := GetExeVersion(ParamStr(0));
+end;
+
+function GetExeVersion(const AFilename: string): String; overload;
+begin
+  result := GetExeVersionFmt(AFilename, '%d.%d.%d.%d');
+end;
+
+function GetExeVersionFmt(const AFormat: string): String;
 var
   LExeFilename: string;
 begin
   LExeFilename := ParamStr(0);
-  result := GetExeVersion(LExeFilename, AFormat);
+  result := GetExeVersionFmt(LExeFilename, AFormat);
 end;
 
-function GetExeVersion(
-  const AFilename: string;
-  const AFormat:   string): String;
+function GetExeVersionFmt(const AFilename: string; const AFormat: string): String;
 var
 
   LVersionInfoSize: DWORD;
@@ -190,7 +214,9 @@ begin
     if AFormat = '' then
     begin
       LFormat := '%d.%d.%d.%d';
-    end else begin
+    end
+    else
+    begin
       LFormat := AFormat;
     end;
     result := Format(LFormat, [LVersionInfo[1], LVersionInfo[2], LVersionInfo[3], LVersionInfo[4]]);
