@@ -48,7 +48,7 @@ begin
       ASource.Clear;
       ASource.AddRange(LResult);
     finally
-      FreeAndNil(ASource);
+      FreeAndNil(LResult);
     end;
   end;
 end;
