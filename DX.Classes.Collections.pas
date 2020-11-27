@@ -21,7 +21,7 @@ type
     /// ASource. Its implementation follows a simple lookup approach and may
     /// behave O(n^2).
     /// </summary>
-    /// <param name="ASource">
+    /// <param name="AList">
     /// A list containing instances of type T.
     /// </param>
     class procedure RemoveDuplicates(AList: TList<T>);
