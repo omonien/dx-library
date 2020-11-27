@@ -24,31 +24,30 @@ type
     /// <param name="ASource">
     /// A list containing instances of type T.
     /// </param>
-    class procedure RemoveDuplicates(ASource: TList<T>);
+    class procedure RemoveDuplicates(AList: TList<T>);
   end;
 
 implementation
 
 { TListHelper<T> }
 
-class procedure TListHelper<T>.RemoveDuplicates(ASource: TList<T>);
+class procedure TListHelper<T>.RemoveDuplicates(AList: TList<T>);
 begin
-  if Assigned(ASource) then
+  if Assigned(AList) then
   begin
-    var
-    LResult := TList<T>.Create;
+    var LTempList := TList<T>.Create;
     try
-      for var LItem in ASource do
+      for var LItem in AList do
       begin
-        if not LResult.Contains(LItem) then
+        if not LTempList.Contains(LItem) then
         begin
-          LResult.Add(LItem);
+          LTempList.Add(LItem);
         end;
       end;
-      ASource.Clear;
-      ASource.AddRange(LResult);
+      AList.Clear;
+      AList.AddRange(LTempList);
     finally
-      FreeAndNil(LResult);
+      FreeAndNil(LTempList);
     end;
   end;
 end;
