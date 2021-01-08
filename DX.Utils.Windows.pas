@@ -5,6 +5,12 @@ interface
 uses
   System.Classes, System.SysUtils;
 
+type
+  TVersionData = record
+    CompanyName, FileDescription, FileVersion, InternalName, LegalCopyright, LegalTrademarks, OriginalFileName,
+      ProductName, ProductVersion, Comments, PrivateBuild, SpecialBuild: string;
+  end;
+
 procedure OpenBrowser(const AUrl: string; AActivate: boolean = true);
 
 function GetExeBuildTimestamp: TDateTime;
@@ -37,6 +43,9 @@ function GetExeVersion(const AFilename: string): String; overload;
 
 function ExecuteProcess(const AFilename, AParams: string; AFolder: string; AWaitUntilTerminated: boolean;
   var ExitCode: integer): boolean;
+
+function GetExeVersionData: TVersionData; overload;
+function GetExeVersionData(const AFilename: string): TVersionData; overload;
 
 function ExecuteCommand(ACommandLine: string; AWork: string = 'C:\'): string;
 
@@ -203,7 +212,6 @@ begin
     try
       GetFileVersionInfo(PChar(LFilename), 0, LVersionInfoSize, LBuffer);
       VerQueryValue(LBuffer, '\', LFileInfo, LHandle);
-
       LVersionInfo[1] := HiWord(PVSFixedFileInfo(LFileInfo)^.dwFileVersionMS);
       LVersionInfo[2] := LoWord(PVSFixedFileInfo(LFileInfo)^.dwFileVersionMS);
       LVersionInfo[3] := HiWord(PVSFixedFileInfo(LFileInfo)^.dwFileVersionLS);
@@ -220,6 +228,66 @@ begin
       LFormat := AFormat;
     end;
     result := Format(LFormat, [LVersionInfo[1], LVersionInfo[2], LVersionInfo[3], LVersionInfo[4]]);
+  end;
+end;
+
+function GetExeVersionData: TVersionData;
+begin
+  result := GetExeVersionData(ParamStr(0));
+end;
+
+function GetExeVersionData(const AFilename: string): TVersionData;
+
+  function Query(ABuffer: Pointer; const ALanguage: string; AFieldName: string): String;
+  var
+    LQueryResult: Pointer;
+    LVerinfoLen: Cardinal;
+  begin
+    if VerQueryValue(ABuffer, PChar('\StringFileInfo\' + ALanguage + '\' + AFieldName), LQueryResult, LVerinfoLen) then
+      result := PChar(LQueryResult)
+    else
+      result := '';
+  end;
+
+type
+  PLandCodepage = ^TLandCodepage;
+
+  TLandCodepage = record
+    wLanguage, wCodePage: Word;
+  end;
+var
+  LHandle: Cardinal;
+  LVerinfoLen: Cardinal;
+  LBuffer, LQueryResult: Pointer;
+  LLanguage: string;
+begin
+  LVerinfoLen := GetFileVersionInfoSize(PChar(AFilename), LHandle);
+  if LVerinfoLen = 0 then
+    RaiseLastOSError;
+  GetMem(LBuffer, LVerinfoLen);
+  try
+    if not GetFileVersionInfo(PChar(AFilename), 0, LVerinfoLen, LBuffer) then
+      RaiseLastOSError;
+
+    if not VerQueryValue(LBuffer, '\VarFileInfo\Translation\', LQueryResult, LVerinfoLen) then
+      RaiseLastOSError;
+
+    LLanguage := Format('%.4x%.4x', [PLandCodepage(LQueryResult)^.wLanguage, PLandCodepage(LQueryResult)^.wCodePage]);
+
+    result.CompanyName := Query(LBuffer, LLanguage, 'CompanyName');
+    result.FileDescription := Query(LBuffer, LLanguage, 'FileDescription');
+    result.FileVersion := Query(LBuffer, LLanguage, 'FileVersion');
+    result.InternalName := Query(LBuffer, LLanguage, 'InternalName');
+    result.LegalCopyright := Query(LBuffer, LLanguage, 'LegalCopyright');
+    result.LegalTrademarks := Query(LBuffer, LLanguage, 'LegalTrademarks');
+    result.OriginalFileName := Query(LBuffer, LLanguage, 'OriginalFileName');
+    result.ProductName := Query(LBuffer, LLanguage, 'ProductName');
+    result.ProductVersion := Query(LBuffer, LLanguage, 'ProductVersion');
+    result.Comments := Query(LBuffer, LLanguage, 'Comments');
+    result.PrivateBuild := Query(LBuffer, LLanguage, 'PrivateBuild');
+    result.SpecialBuild := Query(LBuffer, LLanguage, 'SpecialBuild');
+  finally
+    FreeMem(LBuffer);
   end;
 end;
 
