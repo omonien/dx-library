@@ -286,13 +286,22 @@ begin
   LModule := TAnonymousServerModule.Create(AURL,
     procedure(const AContext: THttpServerContext)
     begin
+      // GET /monitor wird nicht geloggt.
+      var
+      LLogRequest := not((AContext.Request.MethodType = THttpMethod.Get) and
+        (AContext.Request.URI.Path.Trim.ToLower.EndsWith('monitor')));
+
       // Todo:  FCurrentRequest := AContext.Request;
-      LogRequest(AContext.Request);
+      if LLogRequest then
+        LogRequest(AContext.Request);
       try
         HandleRequest(LBaseURL, AContext);
         // Todo: Response loggen ...
-        Log('Response StatusCode: ' + AContext.Response.StatusCode.ToString);
-        Log('Response Headers: ' + AContext.Response.Headers.RawWideHeaders);
+        if LLogRequest then
+        begin
+          Log('Response StatusCode: ' + AContext.Response.StatusCode.ToString);
+          Log('Response Headers: ' + AContext.Response.Headers.RawWideHeaders);
+        end;
       except
         on E: Exception do
         begin
@@ -375,7 +384,7 @@ begin
   FHeaderFields.NameValueSeparator := ':';
   FHeaderFields.Text := FContext.Request.Headers.RawWideHeaders;
 
-  FRemoteIP := GetFieldByName('RemoteIP');
+  FRemoteIP := AHttpContext.Request.RemoteIP;
 end;
 
 destructor TSparkleRequest.Destroy;
@@ -423,10 +432,13 @@ begin
     // Now check if it's a content field
     i := FContentFields.IndexOfName(LName);
     if i >= 0 then
+    begin
       result := FContentFields.ValueFromIndex[i];
+    end;
   end;
   result := result.Trim;
 end;
+
 
 function TSparkleRequest.GetIntegerVariable(Index: Integer): Integer;
 begin
