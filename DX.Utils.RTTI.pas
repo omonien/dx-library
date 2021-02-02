@@ -205,34 +205,37 @@ var
   LSourceValue: TValue;
 
 begin
-  LContext := TRttiContext.Create;
-  try
-    LSourceType := LContext.GetType(ASource.ClassType);
-    LSourceProperties := LSourceType.GetProperties;
-    LSelfType := LContext.GetType(self.ClassType);
-    LSelfProperties := LSelfType.GetProperties;
+  if Assigned(ASource) then
+  begin
+    LContext := TRttiContext.Create;
+    try
+      LSourceType := LContext.GetType(ASource.ClassType);
+      LSourceProperties := LSourceType.GetProperties;
+      LSelfType := LContext.GetType(self.ClassType);
+      LSelfProperties := LSelfType.GetProperties;
 
-    for LSelfProperty in LSelfProperties do
-    begin
-      if LSelfProperty.IsWritable then
+      for LSelfProperty in LSelfProperties do
       begin
-        // Find in source and copy if type matches
-        for LSourceProperty in LSourceProperties do
+        if LSelfProperty.IsWritable then
         begin
-          if (LSourceProperty.IsReadable)
-            and (LSourceProperty.Name = LSelfProperty.Name)
-            and (LSourceProperty.PropertyType = LSelfProperty.PropertyType)
-          then
+          // Find in source and copy if type matches
+          for LSourceProperty in LSourceProperties do
           begin
-            LSourceValue := LSourceProperty.GetValue(ASource);
-            LSelfProperty.SetValue(self, LSourceValue);
-            break;
+            if (LSourceProperty.IsReadable)
+              and (LSourceProperty.Name = LSelfProperty.Name)
+              and (LSourceProperty.PropertyType = LSelfProperty.PropertyType)
+            then
+            begin
+              LSourceValue := LSourceProperty.GetValue(ASource);
+              LSelfProperty.SetValue(self, LSourceValue);
+              break;
+            end;
           end;
         end;
       end;
+    finally
+      LContext.Free;
     end;
-  finally
-    LContext.Free;
   end;
 end;
 
@@ -314,4 +317,3 @@ begin
 end;
 
 end.
-
