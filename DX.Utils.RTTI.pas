@@ -330,7 +330,7 @@ end;
 
 procedure TObjectHelper.SetProperty(APropertyName: string; AValue: TValue);
 begin
-
+  GetProperty(APropertyName).SetValue(self, AValue);
 end;
 
 { TRTTIPropertyHelper }
