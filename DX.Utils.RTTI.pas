@@ -173,7 +173,12 @@ begin
     begin
       if not(AExcludes.Contains(LProperty.Name)) then
       begin
-        Result.Add(LProperty.Name + ' = ' + LProperty.GetValue(self).ToString);
+        var LValue := '';
+        if LProperty.IsReadable then
+        begin
+          LValue := ' = ' + LProperty.GetValue(self).ToString;
+        end;
+        Result.Add(LProperty.Name + LValue);
       end;
     end;
     Result.Sort;
