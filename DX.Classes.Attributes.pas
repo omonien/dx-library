@@ -21,6 +21,7 @@ implementation
 
 constructor StringValueAttribute.Create(const AValue: string);
 begin
+  inherited Create;
   FValue := AValue;
 end;
 

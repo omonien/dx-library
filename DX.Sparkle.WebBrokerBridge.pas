@@ -21,6 +21,7 @@ type
   private
     FLogProc: TProc<string>;
     FLogRequestProc: TProc<THttpServerRequest>;
+    FBaseURL: string;
   protected
     procedure HandleRequest(
       const ABaseUri:  string;
@@ -31,6 +32,7 @@ type
     procedure SetLogRequestProc(ARequestLogProc: TProc<THttpServerRequest>);
   public
     constructor Create(const AURL: string); reintroduce;
+    property BaseURL: string read FBaseURL;
     property LogProc: TProc<string> read FLogProc write SetLogProc;
     property LogRequestProc: TProc<THttpServerRequest> read FLogRequestProc write SetLogRequestProc;
   end;
@@ -279,10 +281,9 @@ end;
 constructor TSparkleWebBrokerBridge.Create(const AURL: string);
 var
   LModule: TAnonymousServerModule;
-  LBaseURL: string;
 begin
   inherited Create;
-  LBaseURL := AURL;
+  FBaseURL := AURL;
   LModule := TAnonymousServerModule.Create(AURL,
     procedure(const AContext: THttpServerContext)
     begin
@@ -295,7 +296,7 @@ begin
       if LLogRequest then
         LogRequest(AContext.Request);
       try
-        HandleRequest(LBaseURL, AContext);
+        HandleRequest(FBaseURL, AContext);
         // Todo: Response loggen ...
         if LLogRequest then
         begin

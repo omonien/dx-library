@@ -68,7 +68,7 @@ procedure OpenURL(const AUrl: string);
 implementation
 
 uses
-  IdHash, IdHashMessageDigest, IdHashSHA;
+  IdHash, IdHashMessageDigest, IdHashSHA, DX.Utils.Windows;
 
 procedure OpenURL(const AUrl: string);
 {$IFDEF IOS}
