@@ -5,10 +5,8 @@ interface
 uses
   System.Classes, System.SysUtils,
   Web.WebReq, Web.HTTPApp,
-  Sparkle.HttpSys.Server, Sparkle.HttpSys.Context, Sparkle.HttpServer.Request, Sparkle.HttpServer.Context
-  // ,
-  // Loomis.SoapServer.Service.Types
-    ;
+  Sparkle.HttpSys.Server, Sparkle.HttpSys.Context, Sparkle.HttpServer.Request, Sparkle.HttpServer.Context,
+  Sparkle.Security;
 
 type
   ESWBException = class(Exception)
@@ -24,7 +22,7 @@ type
     FBaseURL: string;
   protected
     procedure HandleRequest(
-      const ABaseUri:  string;
+      const ABaseUri: string;
       ARequestContext: THttpServerContext);
     procedure Log(const AMessage: string);
     procedure LogRequest(ARequest: THttpServerRequest);
@@ -98,6 +96,7 @@ type
     // This is a reference to the internal HTTP.SYS API request context
     FContext: THttpServerContext;
     FRootPath: string;
+    FUser: IUserIdentity;
   protected
     FContent: String;
     FContentFields: TStrings;
@@ -117,21 +116,16 @@ type
     destructor Destroy; override;
     // Read field values from header and content fields. Header fields are tried first
     function GetFieldByName(const Name: string): string; override;
-    function ReadClient(
-      var Buffer;
-      Count: Integer): Integer; override;
+    function ReadClient(var Buffer; Count: Integer): Integer; override;
     function ReadString(Count: Integer): string; override;
     function TranslateURI(const URI: string): string; override;
-    function WriteClient(
-      var ABuffer;
-      ACount: Integer): Integer; override;
-    function WriteHeaders(
-      StatusCode:                  Integer;
-      const ReasonString, Headers: string): boolean; override;
+    function WriteClient(var ABuffer; ACount: Integer): Integer; override;
+    function WriteHeaders(StatusCode: Integer; const ReasonString, Headers: string): boolean; override;
     function WriteString(const AString: string): boolean; override;
     // We are using a response cache, to buffer WriteXyz() operations until the actual response is written
     property ResponseCache: THttpSysResponseCache read FResponseCache;
     property RootPath: string read FRootPath write FRootPath;
+    property User: IUserIdentity read FUser write FUser;
   end;
 
   TSparkleResponse = class(TWebResponse)
@@ -150,14 +144,14 @@ type
     procedure SetContent(const AValue: string); override;
     procedure SetContentStream(AValue: TStream); override;
     procedure SetDateVariable(
-      Index:       Integer;
+      Index: Integer;
       const Value: TDateTime); override;
     procedure SetIntegerVariable(
       Index: Integer;
       Value: Integer); override;
     procedure SetStatusCode(AValue: Integer); override;
     procedure SetStringVariable(
-      Index:       Integer;
+      Index: Integer;
       const Value: string); override;
   public
     constructor Create(AHttpRequest: TSparkleRequest);
@@ -316,7 +310,7 @@ begin
 end;
 
 procedure TSparkleWebBrokerBridge.HandleRequest(
-  const ABaseUri:  string;
+  const ABaseUri: string;
   ARequestContext: THttpServerContext);
 var
   LBaseURL: TUri;
@@ -386,6 +380,8 @@ begin
   FHeaderFields.Text := FContext.Request.Headers.RawWideHeaders;
 
   FRemoteIP := AHttpContext.Request.RemoteIP;
+
+  FUser := AHttpContext.Request.User;
 end;
 
 destructor TSparkleRequest.Destroy;
@@ -439,7 +435,6 @@ begin
   end;
   result := result.Trim;
 end;
-
 
 function TSparkleRequest.GetIntegerVariable(Index: Integer): Integer;
 begin
@@ -584,7 +579,7 @@ begin
 end;
 
 function TSparkleRequest.WriteHeaders(
-  StatusCode:                  Integer;
+  StatusCode: Integer;
   const ReasonString, Headers: string): boolean;
 begin
   // Writing to internal response cache
@@ -775,7 +770,7 @@ begin
 end;
 
 procedure TSparkleResponse.SetDateVariable(
-  Index:       Integer;
+  Index: Integer;
   const Value: TDateTime);
 begin
   // Dates should be passed in as GMT!
@@ -807,7 +802,7 @@ begin
 end;
 
 procedure TSparkleResponse.SetStringVariable(
-  Index:       Integer;
+  Index: Integer;
   const Value: string);
 var
   LValue: string;
