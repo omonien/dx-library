@@ -88,8 +88,9 @@ var
 begin
   if AContext.Request.User = nil then
   begin
+    //First, check Header
     LTokenValue := AContext.Request.Headers.Get(TokenName);
-    // look for URL Parameter
+    // Then check URL Parameter
     if LTokenValue = '' then
     begin
       Var
@@ -98,12 +99,8 @@ begin
       begin
         LTokenValue := LUri.ParameterByName[TokenName];
       end;
-
     end;
-    if (LTokenValue <> '') then
-    begin
-      AContext.Request.User := RetrieveIdentity(LTokenValue);
-    end;
+    AContext.Request.User := RetrieveIdentity(LTokenValue);
   end;
   Next(AContext);
 end;
