@@ -8,6 +8,13 @@ uses
 
 Type
 
+  TIniFileHelper = class helper for TIniFile
+  public
+    procedure WriteDefault(const Section, Ident:string; Value: String); overload;
+    procedure WriteDefault(const Section, Ident:string; Value: Integer); overload;
+    procedure WriteDefault(const Section, Ident:string; Value: Boolean); overload;
+  end;
+
   TConfigEntry = record
     Name: string;
     Description: StringList;
@@ -469,6 +476,29 @@ end;
 constructor ConfigFileAttribute.Create(const AFilename: string);
 begin
   Inherited Create(AFilename);
+end;
+
+{ TIniFileHelper }
+
+procedure TIniFileHelper.WriteDefault(const Section, Ident:string; Value: String);
+begin
+  if not ValueExists(Section, Ident) then
+  begin
+    WriteString(Section, Ident, Value);
+  end;
+end;
+
+procedure TIniFileHelper.WriteDefault(const Section, Ident: string; Value: Boolean);
+const
+  //Same implementation as in TIniFile!
+  Values: array[Boolean] of string = ('0', '1');
+begin
+  WriteDefault(Section, Ident, Values[Ord(Value) <> 0]);
+end;
+
+procedure TIniFileHelper.WriteDefault(const Section, Ident: string; Value: Integer);
+begin
+  WriteDefault(Section, Ident, Value.ToString);
 end;
 
 end.
