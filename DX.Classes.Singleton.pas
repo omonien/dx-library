@@ -106,6 +106,7 @@ end;
 
 class destructor TInterfacedSingleton<T>.Destroy;
 begin
+  FDefaultInstance := nil;
 end;
 
 class function TInterfacedSingleton<T>.Instance: T;
