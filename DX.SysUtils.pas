@@ -7,12 +7,12 @@ interface
 
 {$SCOPEDENUMS ON}
 
+
 uses
-  System.Classes, System.SysUtils
+  System.Classes, System.SysUtils, System.Rtti
 {$IFDEF IOS}
     , Macapi.Helpers, iOSAPi.Helpers, iOSAPi.Foundation, iOSAPi.UIKit
-{$ENDIF}
-    ;
+{$ENDIF};
 
 type
   /// <summary>
@@ -65,6 +65,17 @@ type
   /// </remarks>
 procedure OpenURL(const AUrl: string);
 
+/// <summary>
+/// Simple, yet flexible IIF implementation
+/// </summary>
+function IIF(AExpression: Boolean; ATrueValue: TValue; AFalseValue: TValue): TValue;
+
+/// <summary>
+/// Emulates a "null" constant for TValue, pointing to TValue.Empty
+/// May be moved to DX.Utils.RTTI
+/// </summary>
+function null: TValue;
+
 implementation
 
 uses
@@ -83,6 +94,23 @@ begin
 {$ENDIF}
 end;
 
+function IIF(AExpression: Boolean; ATrueValue: TValue; AFalseValue: TValue): TValue;
+begin
+  if AExpression then
+  begin
+    Result := ATrueValue;
+  end
+  else
+  begin
+    Result := AFalseValue;
+  end;
+end;
+
+function null: TValue;
+begin
+  Result := TValue.Empty;
+end;
+
 class function THash.Hash(const AStream: TStream; AAlgorithm: TAlgorithm): string;
 var
   LHash: TIdHash;
@@ -99,7 +127,7 @@ begin
       TAlgorithm.SHA512:
         LHash := TIdHashSHA512.Create;
     end;
-    result := LHash.HashStreamAsHex(AStream);
+    Result := LHash.HashStreamAsHex(AStream);
   finally
     FreeAndNil(LHash);
   end;
@@ -112,7 +140,7 @@ var
 begin
   LStream := TStringStream.Create(AValue);
   try
-    result := Hash(LStream, AAlgorithm);
+    Result := Hash(LStream, AAlgorithm);
   finally
     FreeAndNil(LStream);
   end;
@@ -127,11 +155,11 @@ begin
     if FileExists(AFileName) then
     begin
       LStream := TFileStream.Create(AFileName, fmOpenRead OR fmShareDenyWrite);
-      result := Hash(LStream, AAlgorithm);
+      Result := Hash(LStream, AAlgorithm);
     end
     else
     begin
-      result := '';
+      Result := '';
     end;
   finally
     FreeAndNil(LStream);
@@ -140,12 +168,12 @@ end;
 
 class function THash.MD5ForFile(const AFileName: string): string;
 begin
-  result := HashForFile(AFileName, TAlgorithm.MD5);
+  Result := HashForFile(AFileName, TAlgorithm.MD5);
 end;
 
 class function THash.SHA1ForFile(const AFileName: string): string;
 begin
-  result := HashForFile(AFileName, TAlgorithm.SHA1);
+  Result := HashForFile(AFileName, TAlgorithm.SHA1);
 end;
 
 end.
