@@ -35,7 +35,7 @@ type
 
 type
   /// <summary>
-  /// Interfaced variant of TInterfacedSingleton.
+  /// Interfaced variant of TInterfacedSingleton. It does NOT implement reference counting - obviously.
   /// </summary>
   /// <typeparam name="T">
   /// T is the actual class that descends from TInterfacedSingleton
@@ -43,9 +43,14 @@ type
   /// <remarks>
   /// Do not create direct instances of TInterfacedSingleton - only descend from it.
   /// </remarks>
-  TInterfacedSingleton<T: Class> = class abstract(TInterfacedObject)
+  TInterfacedSingleton<T: Class> = class abstract(TObject)
   strict private
     class var FDefaultInstance: T;
+  protected
+    { IInterface }
+    function QueryInterface(const IID: TGUID; out Obj): HResult; virtual; stdcall;
+    function _AddRef: Integer; stdcall;
+    function _Release: Integer; stdcall;
   public
     class constructor Create;
     class destructor Destroy;
@@ -106,12 +111,31 @@ end;
 
 class destructor TInterfacedSingleton<T>.Destroy;
 begin
-  FDefaultInstance := nil;
+  FreeAndNil(FDefaultInstance);
 end;
 
 class function TInterfacedSingleton<T>.Instance: T;
 begin
   result := Default;
+end;
+
+{ TInterfacedSingleton.IInterface }
+
+function TInterfacedSingleton<T>.QueryInterface(const IID: TGUID; out Obj):
+    HResult;
+begin
+    if GetInterface(IID, Obj) then Result := S_OK
+    else Result := E_NOINTERFACE
+end;
+
+function TInterfacedSingleton<T>._AddRef: Integer;
+begin
+    Result := -1   // -1 indicates no reference counting is taking place
+end;
+
+function TInterfacedSingleton<T>._Release: Integer;
+begin
+    Result := -1   // -1 indicates no reference counting is taking place
 end;
 
 end.
