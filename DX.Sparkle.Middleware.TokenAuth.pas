@@ -30,6 +30,9 @@ type
 
 implementation
 
+uses
+  System.Net.URLClient, System.NetEncoding;
+
 { TTokenAuthMiddleware }
 
 constructor TTokenAuthMiddleware.Create;
@@ -54,7 +57,7 @@ end;
 
 constructor TTokenAuthMiddleware.Create(AAuthenticateProc: TAuthenticateBasicProc = nil);
 begin
-Create ('', AAuthenticateProc);
+  Create('', AAuthenticateProc);
 end;
 
 procedure TTokenAuthMiddleware.DoAuthenticate(const ATokenValue: string; var User: IUserIdentity);
@@ -64,16 +67,40 @@ begin
 end;
 
 procedure TTokenAuthMiddleware.ProcessRequest(AContext: THttpServerContext; Next: THttpServerProc);
+
+  function FindParameter(AUri: System.Net.URLClient.TURI; AParamName: string): boolean;
+  var
+    i: Integer;
+    LName: string;
+  begin
+    Result := false;
+    LName := TNetEncoding.URL.EncodeQuery(AParamName);
+    for i := 0 to Length(AUri.Params) - 1 do
+      if AUri.Params[i].Name = LName then
+      begin
+       result := true;
+       break;
+      end;
+  end;
+
 var
   LTokenValue: string;
 begin
   if AContext.Request.User = nil then
   begin
+    //First, check Header
     LTokenValue := AContext.Request.Headers.Get(TokenName);
-    if (LTokenValue <> '') then
+    // Then check URL Parameter
+    if LTokenValue = '' then
     begin
-      AContext.Request.User := RetrieveIdentity(LTokenValue);
+      Var
+      LUri := System.Net.URLClient.TURI.Create(AContext.Request.Uri.OriginalUri);
+      if FindParameter(LUri, TokenName) then
+      begin
+        LTokenValue := LUri.ParameterByName[TokenName];
+      end;
     end;
+    AContext.Request.User := RetrieveIdentity(LTokenValue);
   end;
   Next(AContext);
 end;
