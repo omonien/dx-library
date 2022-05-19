@@ -27,9 +27,13 @@ type
     class procedure RemoveDuplicates(AList: TList<T>);
 
     /// <summary>
-    /// "Paginates" the List by returing only the elements that belong to the given page.
+    ///   "Paginates" the List by returing only the elements that belong to the
+    ///   given page.
     /// </summary>
-    class procedure Paginate(AList: TList<T>; APage, APageSize: integer); static;
+    /// <returns>
+    ///   Number of total pages
+    /// </returns>
+    class function Paginate(AList: TList<T>; APage, APageSize: integer): integer; static;
   end;
 
 implementation
@@ -40,9 +44,7 @@ uses
 { TListHelper<T> }
 
 
-class procedure TListHelper<T>.Paginate(
-  AList: TList<T>;
-  APage, APageSize: integer);
+class function TListHelper<T>.Paginate(AList: TList<T>; APage, APageSize: integer): integer;
 begin
   if APage < 1 then
     raise Exception.Create('Page must be larger than 0!');
@@ -53,13 +55,13 @@ begin
   var
   LCount := AList.Count;
   var
-  LPages := LCount div APageSize;
-  // APage/LPages are 1-based
+  LTotalPages := LCount div APageSize;
+  // APage/LTotalPages are 1-based
   if (LCount mod APageSize) > 0 then
   begin
-    inc(LPages);
+    inc(LTotalPages);
   end;
-  // APage := Min(APage, LPages);
+  // APage := Min(APage, LTotalPages);
   // LFrom is 0-based
   var
   LFrom := (APage - 1) * APageSize;
@@ -71,6 +73,7 @@ begin
   begin
     AList.DeleteRange(APageSize, AList.Count - APageSize);
   end;
+  result := LTotalPages;
 end;
 
 
