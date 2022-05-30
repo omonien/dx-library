@@ -106,25 +106,19 @@ procedure DXLog(
 
 implementation
 
-{$IFDEF MSWINDOWS}
-
 uses
+{$IFDEF MSWINDOWS}
   WinAPI.Windows,
   WinAPI.Messages,
-  System.IOUtils, System.DateUtils;
 {$ENDIF}
 {$IF defined(IOS) or Defined(MACOS)}
-
-uses
   DX.Apple.Utils,
-  System.IOUtils;
 {$ENDIF}
 {$IFDEF Android}
-
-uses
   AndroidAPI.Log,
-  System.IOUtils;
 {$ENDIF}
+  System.IOUtils,
+  System.DateUtils;
 
 type
   TLogThread = class(TThread)
