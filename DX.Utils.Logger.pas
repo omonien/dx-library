@@ -523,7 +523,8 @@ begin
     OutputDebugString(pchar(LMessage));
 {$ENDIF}
 {$IFDEF ANDROID}
-    LOGI(LMarshaller.AsAnsi(LMessage).ToPointer);
+    Var LText := LMarshaller.AsAnsi(LMessage).ToPointer;
+    __android_log_write(android_LogPriority.ANDROID_LOG_INFO, 'DXLog', LText);
 {$ENDIF}
   end;
 
@@ -558,5 +559,7 @@ begin
     end;
   end;
 end;
+
+
 
 end.
