@@ -75,6 +75,11 @@ function VendorIdentifier: string;
 function CanOpenURL(const AURL: string): boolean;
 
 /// <summary>
+/// </summary>
+procedure OpenURL(const AURL: string);
+
+
+/// <summary>
 /// Marks the given file not to be backed up by iOS.
 /// See  https://developer.apple.com/library/ios/documentation/FileManagement/Conceptual/FileSystemProgrammingGuide/FileSystemOverview/FileSystemOverview.html#//apple_ref/doc/uid/TP40010672-CH2-SW4
 /// </summary>
@@ -225,6 +230,11 @@ end;
 function CanOpenURL(const AURL: string): boolean;
 begin
   Result := SharedApplication.CanOpenURL(TNSURL.Wrap(TNSURL.OCClass.URLWithString(StrToNSStr(AURL))));
+end;
+
+procedure OpenURL(const AURL: string);
+begin
+  SharedApplication.openURL(TNSURL.Wrap(TNSURL.OCClass.URLWithString(StrToNSStr(AURL))));
 end;
 {$ENDIF}
 
