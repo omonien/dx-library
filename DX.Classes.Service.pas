@@ -9,6 +9,8 @@ uses
 
 type
 
+  TService = VCl.SvcMgr.TService;
+
   /// <summary>
   /// Allows to register a dscription for a TService
   /// </summary>
@@ -56,6 +58,7 @@ type
 implementation
 
 {$R *.DFM}
+
 
 uses
   System.Win.Registry, Winapi.Windows,
