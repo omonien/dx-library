@@ -85,10 +85,8 @@ begin
 end;
 
 procedure TConfigurationUI.StatusBarDblClick(Sender: TObject);
-var
-  LHandle: HWND;
 begin
-  ShellExecute(LHandle, 'open', PChar(FConfig.Configuration.FileName), nil, nil, SW_SHOW);
+  ShellExecute(Application.MainForm.Handle, 'open', PChar(FConfig.Configuration.FileName), nil, nil, SW_SHOW);
 end;
 
 end.
