@@ -107,7 +107,7 @@ type
     // Used to cache response information, until the response gets finally constructed and sent
     FResponseCache: THttpSysResponseCache;
     function GetDateVariable(Index: Integer): TDateTime; override;
-    function GetIntegerVariable(Index: Integer): Integer; override;
+    function GetIntegerVariable(Index: Integer): Int64; override;
     function GetRawContent: TBytes; override;
     function GetRawPathInfo: string; override;
     function GetRemoteIP: string; override;
@@ -143,7 +143,7 @@ type
     FSent: boolean;
     function GetContent: string; override;
     function GetDateVariable(Index: Integer): TDateTime; override;
-    function GetIntegerVariable(Index: Integer): Integer; override;
+    function GetIntegerVariable(Index: Integer): Int64; override;
     function GetStatusCode: Integer; override;
     function GetStringVariable(Index: Integer): string; override;
     procedure MoveCookies;
@@ -154,7 +154,7 @@ type
       const Value: TDateTime); override;
     procedure SetIntegerVariable(
       Index: Integer;
-      Value: Integer); override;
+      Value: Int64); override;
     procedure SetStatusCode(AValue: Integer); override;
     procedure SetStringVariable(
       Index:       Integer;
@@ -441,7 +441,7 @@ begin
 end;
 
 
-function TSparkleRequest.GetIntegerVariable(Index: Integer): Integer;
+function TSparkleRequest.GetIntegerVariable(Index: Integer): Int64;
 begin
   result := StrToIntDef(string(GetStringVariable(Index)), -1)
 end;
@@ -637,7 +637,7 @@ begin
 
 end;
 
-function TSparkleResponse.GetIntegerVariable(Index: Integer): Integer;
+function TSparkleResponse.GetIntegerVariable(Index: Integer): Int64;
 begin
   case Index of
     INDEX_RESP_ContentLength:
@@ -791,7 +791,7 @@ begin
   end;
 end;
 
-procedure TSparkleResponse.SetIntegerVariable(Index, Value: Integer);
+procedure TSparkleResponse.SetIntegerVariable(Index: Integer; Value: Int64);
 begin
   case Index of
     INDEX_RESP_ContentLength:
