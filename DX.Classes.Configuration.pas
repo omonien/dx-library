@@ -4,9 +4,16 @@ interface
 
 uses
   System.Classes, System.SysUtils, System.IniFiles, System.Rtti, System.Generics.Collections,
-  DX.Classes.Singleton, DX.Classes.Strings, DX.Classes.Attributes;
+  DX.Classes.Singleton, DX.Classes.Strings, DX.Classes.Attributes, DX.Classes.Configuration.Intf;
 
 Type
+
+  TIniFileHelper = class helper for TIniFile
+  public
+    procedure WriteDefault(const Section, Ident: string; Value: String); overload;
+    procedure WriteDefault(const Section, Ident: string; Value: Integer); overload;
+    procedure WriteDefault(const Section, Ident: string; Value: Boolean); overload;
+  end;
 
   TConfigEntry = record
     Name: string;
@@ -49,7 +56,7 @@ Type
   ConfigValueEncryptedAttribute = class(TCustomAttribute)
   end;
 
-  TConfigurationManager<T: class> = class abstract(TSingleton<T>)
+  TConfigurationManager<T: class> = class abstract(TInterfacedSingleton<T>, IConfiguration)
   strict private
     FEncryptionKey: string;
   private
@@ -57,7 +64,7 @@ Type
     FStorageFile: string;
     FDescription: StringList;
     procedure AddComments(
-      var AStrings:    StringList;
+      var AStrings: StringList;
       const AComments: StringList);
     function GetEncoding: TEncoding;
   strict protected
@@ -95,10 +102,11 @@ Type
 
     procedure SetConfigValueForProperty(
       const AProperty: string;
-      AValue:          Variant);
+      AValue: Variant);
     procedure WriteDescription;
     function Encrypt(const AText: string): string;
     function Decrypt(const AEncryptedText: string): string;
+    function GetConfiguration: TCustomIniFile;
   public
     constructor Create;
     destructor Destroy; override;
@@ -106,6 +114,7 @@ Type
     property EncryptionKey: string write FEncryptionKey;
     property Filename: string read FStorageFile;
     property Encoding: TEncoding read GetEncoding write SetEncoding;
+    property Configuration: TCustomIniFile read GetConfiguration;
   end;
 
 implementation
@@ -121,7 +130,7 @@ begin
 end;
 
 procedure TConfigurationManager<T>.AddComments(
-  var AStrings:    StringList;
+  var AStrings: StringList;
   const AComments: StringList);
 var
   AComment: string;
@@ -297,7 +306,7 @@ end;
 
 procedure TConfigurationManager<T>.SetConfigValueForProperty(
   const AProperty: string;
-  AValue:          Variant);
+  AValue: Variant);
 var
   S: string;
   LConfigItem: TConfigEntry;
@@ -321,6 +330,11 @@ end;
 procedure TConfigurationManager<T>.SetEncoding(const Value: TEncoding);
 begin
   FStorage.Encoding := Value;
+end;
+
+function TConfigurationManager<T>.GetConfiguration: TCustomIniFile;
+begin
+  result := FStorage
 end;
 
 function TConfigurationManager<T>.GetConfigValueForProperty(const AProperty: string): Variant;
@@ -469,6 +483,29 @@ end;
 constructor ConfigFileAttribute.Create(const AFilename: string);
 begin
   Inherited Create(AFilename);
+end;
+
+{ TIniFileHelper }
+
+procedure TIniFileHelper.WriteDefault(const Section, Ident: string; Value: String);
+begin
+  if not ValueExists(Section, Ident) then
+  begin
+    WriteString(Section, Ident, Value);
+  end;
+end;
+
+procedure TIniFileHelper.WriteDefault(const Section, Ident: string; Value: Boolean);
+const
+  // Same implementation as in TIniFile!
+  Values: array [Boolean] of string = ('0', '1');
+begin
+  WriteDefault(Section, Ident, Values[Ord(Value) <> 0]);
+end;
+
+procedure TIniFileHelper.WriteDefault(const Section, Ident: string; Value: Integer);
+begin
+  WriteDefault(Section, Ident, Value.ToString);
 end;
 
 end.

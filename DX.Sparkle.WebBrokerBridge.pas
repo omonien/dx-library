@@ -5,10 +5,8 @@ interface
 uses
   System.Classes, System.SysUtils,
   Web.WebReq, Web.HTTPApp,
-  Sparkle.HttpSys.Server, Sparkle.HttpSys.Context, Sparkle.HttpServer.Request, Sparkle.HttpServer.Context
-  // ,
-  // Loomis.SoapServer.Service.Types
-    ;
+  Sparkle.HttpSys.Server, Sparkle.HttpSys.Context, Sparkle.HttpServer.Request, Sparkle.HttpServer.Context,
+  Sparkle.Security;
 
 type
   ESWBException = class(Exception)
@@ -18,23 +16,29 @@ type
   end;
 
   TSparkleWebBrokerBridge = class(THttpSysServer)
+  public
+{$SCOPEDENUMS ON}
+    type
+    TLogItem = (Request, Response);
+    TLogItems = set of TLogItem;
   private
     FLogProc: TProc<string>;
-    FLogRequestProc: TProc<THttpServerRequest>;
     FBaseURL: string;
+    FLogItems: TLogItems;
   protected
     procedure HandleRequest(
-      const ABaseUri:  string;
+      const ABaseUri: string;
       ARequestContext: THttpServerContext);
     procedure Log(const AMessage: string);
     procedure LogRequest(ARequest: THttpServerRequest);
+    procedure LogResponse(AResponse: THttpServerResponse);
     procedure SetLogProc(ALogProc: TProc<string>);
-    procedure SetLogRequestProc(ARequestLogProc: TProc<THttpServerRequest>);
+
   public
     constructor Create(const AURL: string); reintroduce;
     property BaseURL: string read FBaseURL;
     property LogProc: TProc<string> read FLogProc write SetLogProc;
-    property LogRequestProc: TProc<THttpServerRequest> read FLogRequestProc write SetLogRequestProc;
+    property LogItems: TLogItems read FLogItems write FLogItems;
   end;
 
   TSparkleWebBrokerBridgeRequestHandler = class(TWebRequestHandler)
@@ -98,6 +102,7 @@ type
     // This is a reference to the internal HTTP.SYS API request context
     FContext: THttpServerContext;
     FRootPath: string;
+    FUser: IUserIdentity;
   protected
     FContent: String;
     FContentFields: TStrings;
@@ -117,21 +122,16 @@ type
     destructor Destroy; override;
     // Read field values from header and content fields. Header fields are tried first
     function GetFieldByName(const Name: string): string; override;
-    function ReadClient(
-      var Buffer;
-      Count: Integer): Integer; override;
+    function ReadClient(var Buffer; Count: Integer): Integer; override;
     function ReadString(Count: Integer): string; override;
     function TranslateURI(const URI: string): string; override;
-    function WriteClient(
-      var ABuffer;
-      ACount: Integer): Integer; override;
-    function WriteHeaders(
-      StatusCode:                  Integer;
-      const ReasonString, Headers: string): boolean; override;
+    function WriteClient(var ABuffer; ACount: Integer): Integer; override;
+    function WriteHeaders(StatusCode: Integer; const ReasonString, Headers: string): boolean; override;
     function WriteString(const AString: string): boolean; override;
     // We are using a response cache, to buffer WriteXyz() operations until the actual response is written
     property ResponseCache: THttpSysResponseCache read FResponseCache;
     property RootPath: string read FRootPath write FRootPath;
+    property User: IUserIdentity read FUser write FUser;
   end;
 
   TSparkleResponse = class(TWebResponse)
@@ -150,15 +150,16 @@ type
     procedure SetContent(const AValue: string); override;
     procedure SetContentStream(AValue: TStream); override;
     procedure SetDateVariable(
-      Index:       Integer;
+      Index: Integer;
       const Value: TDateTime); override;
     procedure SetIntegerVariable(
       Index: Integer;
       Value: Int64); override;
     procedure SetStatusCode(AValue: Integer); override;
     procedure SetStringVariable(
-      Index:       Integer;
+      Index: Integer;
       const Value: string); override;
+    procedure SetCurrentResponseContent(AStream: TStream); overload;
   public
     constructor Create(AHttpRequest: TSparkleRequest);
     procedure SendRedirect(const AURI: string); override;
@@ -167,8 +168,6 @@ type
     function Sent: boolean; override;
     property Request: TSparkleRequest read GetRequest;
   end;
-
-threadvar FCurrentRequest: TSparkleRequest;
 
 implementation
 
@@ -232,6 +231,9 @@ const
   INDEX_RESP_Expires = 1;
   INDEX_RESP_LastModified = 2;
 
+threadvar FCurrentResponseContent: string;
+
+
 function SparkleWebBrokerBridgeRequestHandler: TWebRequestHandler;
 begin
   result := TSparkleWebBrokerBridgeRequestHandler.Instance;
@@ -287,22 +289,17 @@ begin
   LModule := TAnonymousServerModule.Create(AURL,
     procedure(const AContext: THttpServerContext)
     begin
-      // GET /monitor wird nicht geloggt.
+      // GET /monitor is not logged!
       var
-      LLogRequest := not((AContext.Request.MethodType = THttpMethod.Get) and
+      LLog := not((AContext.Request.MethodType = THttpMethod.Get) and
         (AContext.Request.URI.Path.Trim.ToLower.EndsWith('monitor')));
 
-      // Todo:  FCurrentRequest := AContext.Request;
-      if LLogRequest then
+      if LLog then
         LogRequest(AContext.Request);
       try
         HandleRequest(FBaseURL, AContext);
-        // Todo: Response loggen ...
-        if LLogRequest then
-        begin
-          Log('Response StatusCode: ' + AContext.Response.StatusCode.ToString);
-          Log('Response Headers: ' + AContext.Response.Headers.RawWideHeaders);
-        end;
+        if LLog then
+          LogResponse(AContext.Response);
       except
         on E: Exception do
         begin
@@ -316,7 +313,7 @@ begin
 end;
 
 procedure TSparkleWebBrokerBridge.HandleRequest(
-  const ABaseUri:  string;
+  const ABaseUri: string;
   ARequestContext: THttpServerContext);
 var
   LBaseURL: TUri;
@@ -340,27 +337,30 @@ end;
 
 procedure TSparkleWebBrokerBridge.LogRequest(ARequest: THttpServerRequest);
 begin
-  // First, check if there is a dedicated LogRequest procedure
-  if Assigned(FLogRequestProc) then
+  if TLogItem.Request in LogItems then
   begin
-    FLogRequestProc(ARequest);
-  end
-  else
+    Log('Request URL: ' + ARequest.URI.OriginalUri);
+    Log('Request Remote IP: ' + ARequest.RemoteIp);
+    Log('Request Headers: ' + ARequest.Headers.RawWideHeaders.Replace(#13#10, ' || '));
+    Log('Request Content: ' + TEncoding.UTF8.GetString(ARequest.Content));
+  end;
+end;
+
+procedure TSparkleWebBrokerBridge.LogResponse(AResponse: THttpServerResponse);
+begin
+  if TLogItem.Response in LogItems then
   begin
-    // if not, try a simple log
-    Log('Incoming request from ' + ARequest.RemoteIP);
-    Log('Path: ' + ARequest.RawUri);
+    Log('Response Status: ' + AResponse.StatusCode.ToString);
+    Log('Response Headers: ' + AResponse.Headers.RawWideHeaders.Replace(#13#10, ' || '));
+    Log('Response Content: ' + FCurrentResponseContent);
   end;
 end;
 
 procedure TSparkleWebBrokerBridge.SetLogProc(ALogProc: TProc<string>);
 begin
   FLogProc := ALogProc;
-end;
-
-procedure TSparkleWebBrokerBridge.SetLogRequestProc(ARequestLogProc: TProc<THttpServerRequest>);
-begin
-  FLogRequestProc := ARequestLogProc;
+  // Default: set all log items
+  FLogItems := [TLogItem.Request, TLogItem.Response];
 end;
 
 { THTTPRequest }
@@ -385,7 +385,9 @@ begin
   FHeaderFields.NameValueSeparator := ':';
   FHeaderFields.Text := FContext.Request.Headers.RawWideHeaders;
 
-  FRemoteIP := AHttpContext.Request.RemoteIP;
+  FRemoteIP := AHttpContext.Request.RemoteIp;
+
+  FUser := AHttpContext.Request.User;
 end;
 
 destructor TSparkleRequest.Destroy;
@@ -584,7 +586,7 @@ begin
 end;
 
 function TSparkleRequest.WriteHeaders(
-  StatusCode:                  Integer;
+  StatusCode: Integer;
   const ReasonString, Headers: string): boolean;
 begin
   // Writing to internal response cache
@@ -692,6 +694,19 @@ begin
   result := LValue.Trim;
 end;
 
+procedure TSparkleResponse.SetCurrentResponseContent(AStream: TStream);
+var
+  LStreamBytes: TBytes;
+begin
+  if Assigned(AStream) then
+  begin
+     SetLength(LStreamBytes, AStream.Size);
+     AStream.Position := 0;
+     AStream.Read(LStreamBytes, AStream.Size);
+    FCurrentResponseContent := TEncoding.UTF8.GetString(LStreamBytes);
+  end;
+end;
+
 procedure TSparkleResponse.MoveCookies;
 var
   i: Integer;
@@ -743,13 +758,13 @@ begin
   if Assigned(Request.FResponseCache.ContentStream) then
   begin
     FContext.Response.Content.CopyFrom(Request.FResponseCache.ContentStream, 0);
+    SetCurrentResponseContent(Request.FResponseCache.ContentStream);
   end
   else
   begin
     // Todo: check real Encoding
     FContext.Response.Close(TEncoding.UTF8.GetBytes(Request.FResponseCache.Content));
   end;
-
 end;
 
 procedure TSparkleResponse.SendStream(AStream: TStream);
@@ -775,7 +790,7 @@ begin
 end;
 
 procedure TSparkleResponse.SetDateVariable(
-  Index:       Integer;
+  Index: Integer;
   const Value: TDateTime);
 begin
   // Dates should be passed in as GMT!
@@ -807,7 +822,7 @@ begin
 end;
 
 procedure TSparkleResponse.SetStringVariable(
-  Index:       Integer;
+  Index: Integer;
   const Value: string);
 var
   LValue: string;

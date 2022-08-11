@@ -25,11 +25,58 @@ type
     /// A list containing instances of type T.
     /// </param>
     class procedure RemoveDuplicates(AList: TList<T>);
+
+    /// <summary>
+    ///   "Paginates" the List by returing only the elements that belong to the
+    ///   given page.
+    /// </summary>
+    /// <returns>
+    ///   Number of total pages
+    /// </returns>
+    class function Paginate(AList: TList<T>; APage, APageSize: integer): integer; static;
   end;
 
 implementation
 
+uses
+  System.Math;
+
 { TListHelper<T> }
+
+
+class function TListHelper<T>.Paginate(AList: TList<T>; APage, APageSize: integer): integer;
+begin
+  if APage < 1 then
+    raise Exception.Create('Page must be larger than 0!');
+
+  if APageSize < 1 then
+    raise Exception.Create('PageSize must be larger than 0!');
+
+  var
+  LCount := AList.Count;
+  var
+  LTotalPages := LCount div APageSize;
+  // APage/LTotalPages are 1-based
+  if (LCount mod APageSize) > 0 then
+  begin
+    inc(LTotalPages);
+  end;
+  // APage := Min(APage, LTotalPages);
+  // LFrom is 0-based
+  var
+  LFrom := (APage - 1) * APageSize;
+
+  // Alle Elemente vor LFrom entfernen
+  AList.DeleteRange(0, Min(AList.Count, LFrom));
+  // Alle Elemente nach einer PageSize entfernen
+  if AList.Count > APageSize then
+  begin
+    AList.DeleteRange(APageSize, AList.Count - APageSize);
+  end;
+  result := LTotalPages;
+end;
+
+
 
 class procedure TListHelper<T>.RemoveDuplicates(AList: TList<T>);
 begin

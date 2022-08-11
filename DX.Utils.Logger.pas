@@ -106,25 +106,19 @@ procedure DXLog(
 
 implementation
 
-{$IFDEF MSWINDOWS}
-
 uses
+{$IFDEF MSWINDOWS}
   WinAPI.Windows,
   WinAPI.Messages,
-  System.IOUtils, System.DateUtils;
 {$ENDIF}
 {$IF defined(IOS) or Defined(MACOS)}
-
-uses
   DX.Apple.Utils,
-  System.IOUtils;
 {$ENDIF}
 {$IFDEF Android}
-
-uses
   AndroidAPI.Log,
-  System.IOUtils;
 {$ENDIF}
+  System.IOUtils,
+  System.DateUtils;
 
 type
   TLogThread = class(TThread)
@@ -529,7 +523,8 @@ begin
     OutputDebugString(pchar(LMessage));
 {$ENDIF}
 {$IFDEF ANDROID}
-    LOGI(LMarshaller.AsAnsi(LMessage).ToPointer);
+    Var LText := LMarshaller.AsAnsi(LMessage).ToPointer;
+    __android_log_write(android_LogPriority.ANDROID_LOG_INFO, 'DXLog', LText);
 {$ENDIF}
   end;
 
@@ -564,5 +559,7 @@ begin
     end;
   end;
 end;
+
+
 
 end.
