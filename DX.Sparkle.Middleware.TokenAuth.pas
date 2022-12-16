@@ -24,6 +24,9 @@ type
     constructor Create; overload;
     constructor Create(AAuthenticateProc: TAuthenticateBasicProc = nil); overload;
     constructor Create(ATokenName: string; AAuthenticateProc: TAuthenticateBasicProc = nil); overload;
+    /// <summary>
+    /// The default token name is "authentication" and is case-insensitive
+    /// </summary>
     property TokenName: string read FTokenName write FTokenName;
     property OnAuthenticate: TAuthenticateBasicProc read FOnAuthenticate write FOnAuthenticate;
   end;
@@ -68,18 +71,19 @@ end;
 
 procedure TTokenAuthMiddleware.ProcessRequest(AContext: THttpServerContext; Next: THttpServerProc);
 
-  function FindParameter(AUri: System.Net.URLClient.TURI; AParamName: string): boolean;
+// Case-insensitive
+  function GetParameterValue(AUri: System.Net.URLClient.TURI; AParamName: string): string;
   var
     i: Integer;
     LName: string;
   begin
-    Result := false;
-    LName := TNetEncoding.URL.EncodeQuery(AParamName);
+    Result := '';
+    LName := TNetEncoding.URL.EncodeQuery(AParamName).ToLower;
     for i := 0 to Length(AUri.Params) - 1 do
-      if AUri.Params[i].Name = LName then
+      if AUri.Params[i].Name.ToLower = LName then
       begin
-       result := true;
-       break;
+        Result := AUri.Params[i].Value;
+        break;
       end;
   end;
 
@@ -88,17 +92,14 @@ var
 begin
   if AContext.Request.User = nil then
   begin
-    //First, check Header
+    // First, check Header
     LTokenValue := AContext.Request.Headers.Get(TokenName);
     // Then check URL Parameter
     if LTokenValue = '' then
     begin
       Var
       LUri := System.Net.URLClient.TURI.Create(AContext.Request.Uri.OriginalUri);
-      if FindParameter(LUri, TokenName) then
-      begin
-        LTokenValue := LUri.ParameterByName[TokenName];
-      end;
+      LTokenValue := GetParameterValue(LUri, TokenName);
     end;
     AContext.Request.User := RetrieveIdentity(LTokenValue);
   end;
