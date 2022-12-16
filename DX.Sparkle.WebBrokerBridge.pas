@@ -6,7 +6,7 @@ uses
   System.Classes, System.SysUtils,
   Web.WebReq, Web.HTTPApp,
   Sparkle.HttpSys.Server, Sparkle.HttpSys.Context, Sparkle.HttpServer.Request, Sparkle.HttpServer.Context,
-  Sparkle.Security;
+  Sparkle.Security, Sparkle.HttpServer.Module;
 
 type
   ESWBException = class(Exception)
@@ -27,6 +27,7 @@ type
     FLogItems: TLogItems;
     FLogRequestProc: TProc<THttpServerRequest>;
     FLogResponseProc: TProc<THttpServerResponse>;
+    FServerModule: THttpServerModule;
   protected
     procedure HandleRequest(
       const ABaseUri: string;
@@ -44,6 +45,7 @@ type
     property LogRequestProc: TProc<THttpServerRequest> read FLogRequestProc write SetLogRequestProc;
     property LogResponseProc: TProc<THttpServerResponse> read FLogResponseProc write SetLogResponseProc;
     property LogItems: TLogItems read FLogItems write FLogItems;
+    property ServerModule: THttpServerModule read FServerModule;
   end;
 
   TSparkleWebBrokerBridgeRequestHandler = class(TWebRequestHandler)
@@ -182,7 +184,7 @@ implementation
 uses
   System.Rtti, System.NetEncoding,
 
-  Sparkle.HttpServer.Module, Sparkle.URI, Sparkle.Middleware.Compress,
+  Sparkle.URI, Sparkle.Middleware.Compress,
   DX.Sparkle.Utils, DX.Utils.Logger;
 
 resourcestring
@@ -288,8 +290,6 @@ begin
 end;
 
 constructor TSparkleWebBrokerBridge.Create(const AURL: string);
-var
-  LModule: TAnonymousServerModule;
 begin
   inherited Create;
   FLogProc := nil;
@@ -301,7 +301,7 @@ begin
   FLogItems := [];
 {$ENDIF}
   FBaseURL := AURL;
-  LModule := TAnonymousServerModule.Create(AURL,
+  FServerModule := TAnonymousServerModule.Create(AURL,
     procedure(const AContext: THttpServerContext)
     begin
       // GET /monitor is not logged!
@@ -323,8 +323,8 @@ begin
         end;
       end;
     end);
-  LModule.AddMiddleware(TCompressMiddleware.Create);
-  Dispatcher.AddModule(LModule);
+  FServerModule.AddMiddleware(TCompressMiddleware.Create);
+  Dispatcher.AddModule(FServerModule);
 end;
 
 procedure TSparkleWebBrokerBridge.HandleRequest(
