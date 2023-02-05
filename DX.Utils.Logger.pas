@@ -29,7 +29,9 @@ type
   private
     class var FInstance: TDXLogger;
     class var FTerminating: Boolean;
+    class var FLogFileName: string;
   private
+
     FExternalStringsOnTop: Boolean;
     FExternalStrings: TStrings;
     FLogBuffer: TStrings;
@@ -67,21 +69,26 @@ type
     /// </summary>
     class property DateFormat: string read GetDateFormat write SetDateFormat;
 
+    class property LogFileName: string read FLogFileName;
+
     /// <summary>
     /// MaxLogAge specifies in days how much logging history will be kept.
     /// Older log messages will be rolled over into a sub dir "logs". <br />
     /// If MaxLogAge is zero (default), then there is no limit.
     /// </summary>
     class property MaxLogAge: integer read GetMaxLogAge write SetMaxLogAge;
+
+
     class procedure Log(const AMessage: string); overload;
     class procedure Log(
       const AFormatString: string;
-      const AValues:       array of const); overload;
+      const AValues: array of const); overload;
+
     class function Instance: TDXLogger; static;
 
     procedure ExceptionHandler(
       ASender: TObject;
-      E:       Exception);
+      E: Exception);
     property ShowExceptionProc: TShowExceptionProc read FShowExceptionProc write SetShowExceptionProc;
   end;
 
@@ -94,7 +101,7 @@ procedure Log(const AMessage: string); overload;
 /// </summary>
 procedure Log(
   const AFormatString: string;
-  const AValues:       array of const); overload;
+  const AValues: array of const); overload;
 /// <summary>
 /// Shortcut to to avoid name clashes with other logging systems
 /// </summary>
@@ -102,7 +109,7 @@ procedure DXLog(const AMessage: string); overload;
 /// Shortcut to to avoid name clashes with other logging systems
 procedure DXLog(
   const AFormatString: string;
-  const AValues:       array of const); overload;
+  const AValues: array of const); overload;
 
 implementation
 
@@ -151,7 +158,7 @@ end;
 
 procedure Log(
   const AFormatString: string;
-  const AValues:       array of const);
+  const AValues: array of const);
 begin
   TDXLogger.Log(AFormatString, AValues);
 end;
@@ -163,7 +170,7 @@ end;
 
 procedure DXLog(
   const AFormatString: string;
-  const AValues:       array of const); overload;
+  const AValues: array of const); overload;
 begin
   Log(AFormatString, AValues);
 end;
@@ -225,14 +232,16 @@ end;
 
 class procedure TDXLogger.Log(
   const AFormatString: string;
-  const AValues:       array of const);
+  const AValues: array of const);
 begin
   Log(Format(AFormatString, AValues));
 end;
 
+
+
 procedure TDXLogger.ExceptionHandler(
   ASender: TObject;
-  E:       Exception);
+  E: Exception);
 var
   LSender: string;
 begin
@@ -307,8 +316,14 @@ begin
 end;
 
 class constructor TDXLogger.Create;
+var
+  s: string;
 begin
   inherited;
+  // Logfile goes into the app exe directory with name {Application name}.log
+  s := TPath.GetLibraryPath;
+  FLogFileName := TPath.Combine(s, TPath.ChangeExtension(TPath.GetFileName(ParamStr(0)), '.log'));
+
   FInstance := TDXLogger.Create;
 end;
 
@@ -335,15 +350,10 @@ end;
 { TLogThread }
 
 constructor TLogThread.Create;
-var
-  s: string;
 begin
   inherited Create(true);
 
-  // Logfile goes into the app exe directory with name {Application name}.log
-  s := TPath.GetLibraryPath;
-  FLogFileName := TPath.Combine(s, TPath.ChangeExtension(TPath.GetFileName(ParamStr(0)), '.log'));
-
+  FLogFileName := TDXLogger.LogFileName;
   FTempBuffer := TStringList.Create;
   FExternalBuffer := TStringList.Create;
   FLastRollOver := 0;
@@ -559,7 +569,5 @@ begin
     end;
   end;
 end;
-
-
 
 end.
