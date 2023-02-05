@@ -40,6 +40,7 @@ type
     FDateFormat: string;
     FShowExceptionProc: TShowExceptionProc;
     FMaxLogAge: integer;
+    class procedure SetLogFilename(const Value: string); static;
   protected
     constructor Create;
     class function GetDateFormat: string; static;
@@ -69,7 +70,12 @@ type
     /// </summary>
     class property DateFormat: string read GetDateFormat write SetDateFormat;
 
-    class property LogFileName: string read FLogFileName;
+
+    /// <summary>
+    /// Location of the log file.
+    /// Setting a new file name is NOT thread-safe. Should only be set once, at app startup
+    /// </summary>
+    class property LogFileName: string read FLogFileName write SetLogFilename;
 
     /// <summary>
     /// MaxLogAge specifies in days how much logging history will be kept.
@@ -134,8 +140,6 @@ type
     FTempBuffer: TStrings;
     // Used as a separate buffer for writing to the external strings
     FExternalBuffer: TStrings;
-    // Todo make configurable
-    FLogFileName: string;
     FLastRollOver: TDate;
 
     procedure UpdateConsole;
@@ -310,6 +314,20 @@ begin
 
 end;
 
+class procedure TDXLogger.SetLogFilename(const Value: string);
+begin
+  FLogFileName := Value;
+  var LDir := TPath.GetDirectoryName(FLogFileName);
+  if not TDirectory.Exists(LDir) then
+  begin
+    try
+      TDirectory.CreateDirectory(LDir);
+    except
+      raise Exception.Create('Log directory could not be created: '+ LDir);
+    end;
+  end;
+end;
+
 procedure TDXLogger.SetShowExceptionProc(const Value: TShowExceptionProc);
 begin
   FShowExceptionProc := Value;
@@ -353,7 +371,6 @@ constructor TLogThread.Create;
 begin
   inherited Create(true);
 
-  FLogFileName := TDXLogger.LogFileName;
   FTempBuffer := TStringList.Create;
   FExternalBuffer := TStringList.Create;
   FLastRollOver := 0;
@@ -425,7 +442,7 @@ var
   LMonth: integer;
   LDay: integer;
 begin
-  LFileStream := TFile.OpenRead(FLogFileName);
+  LFileStream := TFile.OpenRead(TDXLogger.LogFileName);
   try
     // Todo: Make DateFormat customizable!
     // At the begining there should a date: 2020-02-14
@@ -471,13 +488,13 @@ begin
         LLogFileDate := GetLogFileDate;
         if (LLogFileDate + LMaxAge) < Today then
         begin
-          LRollOver := TPath.GetFileNameWithoutExtension(FLogFileName) + '-' +
+          LRollOver := TPath.GetFileNameWithoutExtension(TDXLogger.LogFileName) + '-' +
             FormatDateTime('YYYY-MM-DD', LLogFileDate) + '.log';
-          LLogArchive := TPath.Combine(TPath.GetDirectoryName(FLogFileName), 'Logs');
+          LLogArchive := TPath.Combine(TPath.GetDirectoryName(TDXLogger.LogFileName), 'Logs');
           TDirectory.CreateDirectory(LLogArchive);
           LRollOver := TPath.Combine(LLogArchive, LRollOver);
-          TFile.Copy(FLogFileName, LRollOver, true);
-          TFile.Delete(FLogFileName);
+          TFile.Copy(TDXLogger.LogFileName, LRollOver, true);
+          TFile.Delete(TDXLogger.LogFileName);
         end;
       except
         on E: Exception do
@@ -510,7 +527,7 @@ begin
 {$IF (defined(MSWindows) or defined(LINUX) or defined(MacOS)) and not (defined(IOS))) }
   try
     RollOver;
-    TFile.AppendAllText(FLogFileName, FTempBuffer.Text, TEncoding.UTF8);
+    TFile.AppendAllText(TDXLogger.LogFileName, FTempBuffer.Text, TEncoding.UTF8);
   except
     // Nothing - if logging doesn't work, then there nothing we can do about.
   end;
