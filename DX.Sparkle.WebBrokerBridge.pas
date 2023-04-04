@@ -135,6 +135,8 @@ type
     function WriteClient(var ABuffer; ACount: Integer): Integer; override;
     function WriteHeaders(StatusCode: Integer; const ReasonString, Headers: string): boolean; override;
     function WriteString(const AString: string): boolean; override;
+    procedure InjectHeader(const AHeader: string; const AValue: string); virtual;
+    procedure InjectSOAPActionHeader; virtual;
     // We are using a response cache, to buffer WriteXyz() operations until the actual response is written
     property ResponseCache: THttpSysResponseCache read FResponseCache;
     property RootPath: string read FRootPath write FRootPath;
@@ -183,7 +185,7 @@ implementation
 
 uses
   System.Rtti, System.NetEncoding,
-
+  Xml.xmldom, Xml.XMLIntf, Xml.XMLDoc, Xml.adomxmldom, Xml.Win.msxmldom, Xml.omnixmldom,
   Sparkle.URI, Sparkle.Middleware.Compress,
   DX.Sparkle.Utils, DX.Utils.Logger;
 
@@ -589,6 +591,63 @@ begin
     LValue := '';
   end;
   result := LValue.Trim;
+end;
+
+procedure TSparkleRequest.InjectHeader(const AHeader, AValue: string);
+begin
+  var
+  i := FHeaderFields.IndexOfName(AHeader);
+  if i >= 0 then
+  begin
+    // Die Header sind als TSTringlist implementiert und sortiert
+    // Sortierte Stringlisten lassen sich schlecht manipulieren
+    (FHeaderFields as TStringList).Sorted := false;
+    FHeaderFields.Values[AHeader] := AValue;
+    (FHeaderFields as TStringList).Sorted := true;
+  end
+  else
+  begin
+    FHeaderFields.AddPair(AHeader, AValue);
+  end;
+end;
+
+procedure TSparkleRequest.InjectSOAPActionHeader;
+var
+  LAction: string;
+begin
+  var
+  LSOAPEnvelope := TXMLDocument.Create(nil);
+  try
+    // MSXMLDOM ist vermutlich besser/schneller, aber für OmniXML sind keine DLLs erforderlich!
+    // Und OpenXML funktioniert nicht richtig
+    LSOAPEnvelope.DOMVendor := GetDOMVendor(OmniXML4Factory.Description);
+    LSOAPEnvelope.LoadFromXML(Self.Content);
+    if not Assigned(LSOAPEnvelope.DOMDocument) or not Assigned(LSOAPEnvelope.DOMDocument.documentElement) then
+      raise Exception.Create('Kein SOAP-Envelope im DNbriefing-Request gefunden!');
+    // <?xml version="1.0" encoding="UTF-8"?>
+    // <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+    // <soapenv:Body>
+    // <v4:CreateTicket xmlns:v4="http://w
+    var
+    LRootNode := LSOAPEnvelope.DOMDocument.documentElement;
+    if not(LRootNode.hasChildNodes) then
+      raise Exception.Create('SOAP-Envelope invalid');
+    var
+    LSoapBody := LRootNode.childNodes[0];
+
+    if not LSoapBody.hasChildNodes then
+      raise Exception.Create('SOAP-Envelope invalid');
+    // Die erste Child-Node im Body ist die Action
+    var
+    LActionNode := LSoapBody.childNodes[0];
+    // <v4:CreateTicket ...>
+    LAction := LActionNode.nodeName.Split([':'])[1];
+  finally
+    FreeAndNil(LSOAPEnvelope);
+  end;
+  Self.InjectHeader('soapaction',
+    '"v4:http://wincor-nixdorf.com/datahub/dhx/service-provider/Briefing/Soap/BriefingTypes/v4.0#"' + LAction);
+
 end;
 
 function TSparkleRequest.ReadClient(
