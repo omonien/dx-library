@@ -612,8 +612,29 @@ begin
 end;
 
 procedure TSparkleRequest.InjectSOAPActionHeader(const ASOAPNameSpace: string);
+
+  function FindChild(ARoot: IDOMNode; const ANodeName: string):IDOMNode;
+  var
+    LChild: IDOMNode;
+    LResult: IDOMNode;
+  begin
+    for var i := 0 to ARoot.childNodes.Length - 1 do
+    begin
+      LChild := ARoot.childNodes[i];
+      if LChild.nodeName.EndsWith(ANodeName) then
+      begin
+        LResult := LChild;
+      end;
+    end;
+    if not Assigned(LResult) then
+      raise Exception.Create('Invalid SOAP-Envelope - ' + ANodeName + ' not found!');
+    result := LResult;
+  end;
+
 var
   LAction: string;
+  LSoapBody: IDOMNode;
+
 begin
   var
   LSOAPEnvelope := TXMLDocument.Create(nil);
@@ -630,13 +651,11 @@ begin
     // <v4:CreateTicket xmlns:v4="http://w
     var
     LRootNode := LSOAPEnvelope.DOMDocument.documentElement;
-    if not(LRootNode.hasChildNodes) then
-      raise Exception.Create('SOAP-Envelope invalid');
-    var
-    LSoapBody := LRootNode.childNodes[0];
+    LSoapBody := FindChild(LRootNode, 'Body');
 
     if not LSoapBody.hasChildNodes then
       raise Exception.Create('SOAP-Envelope invalid');
+
     // Die erste Child-Node im Body ist die Action
     var
     LActionNode := LSoapBody.childNodes[0];
