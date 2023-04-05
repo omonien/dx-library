@@ -136,7 +136,7 @@ type
     function WriteHeaders(StatusCode: Integer; const ReasonString, Headers: string): boolean; override;
     function WriteString(const AString: string): boolean; override;
     procedure InjectHeader(const AHeader: string; const AValue: string); virtual;
-    procedure InjectSOAPActionHeader; virtual;
+    procedure InjectSOAPActionHeader(const ASOAPNameSpace: string); virtual;
     // We are using a response cache, to buffer WriteXyz() operations until the actual response is written
     property ResponseCache: THttpSysResponseCache read FResponseCache;
     property RootPath: string read FRootPath write FRootPath;
@@ -611,7 +611,7 @@ begin
   end;
 end;
 
-procedure TSparkleRequest.InjectSOAPActionHeader;
+procedure TSparkleRequest.InjectSOAPActionHeader(const ASOAPNameSpace: string);
 var
   LAction: string;
 begin
@@ -623,7 +623,7 @@ begin
     LSOAPEnvelope.DOMVendor := GetDOMVendor(OmniXML4Factory.Description);
     LSOAPEnvelope.LoadFromXML(Self.Content);
     if not Assigned(LSOAPEnvelope.DOMDocument) or not Assigned(LSOAPEnvelope.DOMDocument.documentElement) then
-      raise Exception.Create('Kein SOAP-Envelope im DNbriefing-Request gefunden!');
+      raise Exception.Create('Kein SOAP-Envelope im Request gefunden!');
     // <?xml version="1.0" encoding="UTF-8"?>
     // <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
     // <soapenv:Body>
@@ -645,8 +645,7 @@ begin
   finally
     FreeAndNil(LSOAPEnvelope);
   end;
-  Self.InjectHeader('soapaction',
-    '"v4:http://wincor-nixdorf.com/datahub/dhx/service-provider/Briefing/Soap/BriefingTypes/v4.0#"' + LAction);
+  Self.InjectHeader('soapaction', ASOAPNameSpace + LAction);
 
 end;
 
