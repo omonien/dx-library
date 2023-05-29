@@ -29,7 +29,10 @@ type
   private
     class var FInstance: TDXLogger;
     class var FTerminating: Boolean;
-    class var FLogFileName: string;
+
+  class var
+    FLogFileName: string;
+    FWaitForLogBuffer: Boolean;
   private
 
     FExternalStringsOnTop: Boolean;
@@ -40,7 +43,9 @@ type
     FDateFormat: string;
     FShowExceptionProc: TShowExceptionProc;
     FMaxLogAge: integer;
+    class function GetWaitForLogBuffer: Boolean; static; inline;
     class procedure SetLogFilename(const Value: string); static;
+    class procedure SetWaitForLogBuffer(const AValue: Boolean); static; inline;
   protected
     constructor Create;
     class function GetDateFormat: string; static;
@@ -51,6 +56,7 @@ type
     class procedure SetMaxLogAge(const Value: integer); static;
     function ExternalStringsAssigned: Boolean;
     procedure SetShowExceptionProc(const Value: TShowExceptionProc);
+    class function LogBufferEmpty: Boolean;
   public
     class constructor Create;
     class destructor Destroy;
@@ -70,7 +76,6 @@ type
     /// </summary>
     class property DateFormat: string read GetDateFormat write SetDateFormat;
 
-
     /// <summary>
     /// Location of the log file.
     /// Setting a new file name is NOT thread-safe. Should only be set once, at app startup
@@ -84,6 +89,11 @@ type
     /// </summary>
     class property MaxLogAge: integer read GetMaxLogAge write SetMaxLogAge;
 
+    /// <summary>
+    /// If WaitForLogBuffer is true (default), then, during shutdown, TDXLogger will wait until all pending log entries
+    /// are written/processed before terminating.
+    /// </summary>
+    class property WaitForLogBuffer: Boolean read GetWaitForLogBuffer write SetWaitForLogBuffer;
 
     class procedure Log(const AMessage: string); overload;
     class procedure Log(
@@ -141,7 +151,6 @@ type
     // Used as a separate buffer for writing to the external strings
     FExternalBuffer: TStrings;
     FLastRollOver: TDate;
-
     procedure UpdateConsole;
     procedure UpdateLogFile;
     procedure UpdateExternalStrings;
@@ -200,7 +209,13 @@ end;
 
 class destructor TDXLogger.Destroy;
 begin
-  FTerminating := true;
+  //Wait until all logs are written
+  while WaitForLogBuffer and not LogBufferEmpty do
+  begin
+    sleep(1);
+  end;
+
+  FTerminating := True;
   FreeAndNil(FInstance);
   inherited;
 end;
@@ -241,7 +256,22 @@ begin
   Log(Format(AFormatString, AValues));
 end;
 
-
+class function TDXLogger.LogBufferEmpty: Boolean;
+begin
+  if Assigned(FInstance) then
+  begin
+    TMonitor.Enter(FInstance);
+    try
+      result := FInstance.FLogBuffer.Count = 0;
+    finally
+      TMonitor.Exit(FInstance);
+    end;
+  end
+  else
+  begin
+    result := True;
+  end;
+end;
 
 procedure TDXLogger.ExceptionHandler(
   ASender: TObject;
@@ -323,7 +353,7 @@ begin
     try
       TDirectory.CreateDirectory(LDir);
     except
-      raise Exception.Create('Log directory could not be created: '+ LDir);
+      raise Exception.Create('Log directory could not be created: ' + LDir);
     end;
   end;
 end;
@@ -338,10 +368,10 @@ var
   s: string;
 begin
   inherited;
+  FWaitForLogBuffer := True;
   // Logfile goes into the app exe directory with name {Application name}.log
   s := TPath.GetLibraryPath;
   FLogFileName := TPath.Combine(s, TPath.ChangeExtension(TPath.GetFileName(ParamStr(0)), '.log'));
-
   FInstance := TDXLogger.Create;
 end;
 
@@ -355,6 +385,24 @@ begin
   end;
 end;
 
+class function TDXLogger.GetWaitForLogBuffer: Boolean;
+begin
+  if Assigned(FInstance) then
+  begin
+
+    TMonitor.Enter(FInstance);
+    try
+      result := FWaitForLogBuffer;
+    finally
+      TMonitor.Exit(FInstance);
+    end;
+  end
+  else
+  begin
+    result := false;
+  end;
+end;
+
 class procedure TDXLogger.SetMaxLogAge(const Value: integer);
 begin
   TMonitor.Enter(FInstance);
@@ -365,11 +413,24 @@ begin
   end;
 end;
 
+class procedure TDXLogger.SetWaitForLogBuffer(const AValue: Boolean);
+begin
+  if Assigned(FInstance) then
+  begin
+    TMonitor.Enter(FInstance);
+    try
+      FWaitForLogBuffer := AValue;
+    finally
+      TMonitor.Exit(FInstance);
+    end;
+  end;
+end;
+
 { TLogThread }
 
 constructor TLogThread.Create;
 begin
-  inherited Create(true);
+  inherited Create(True);
 
   FTempBuffer := TStringList.Create;
   FExternalBuffer := TStringList.Create;
@@ -388,7 +449,7 @@ procedure TLogThread.Execute;
 var
   LBufferEmpty: Boolean;
 begin
-  LBufferEmpty := true;
+  LBufferEmpty := True;
 
   while not terminated do
   begin
@@ -414,7 +475,7 @@ begin
 
     if FTempBuffer.Count = 0 then
     begin
-      LBufferEmpty := true;
+      LBufferEmpty := True;
     end
     else
     begin
@@ -493,7 +554,7 @@ begin
           LLogArchive := TPath.Combine(TPath.GetDirectoryName(TDXLogger.LogFileName), 'Logs');
           TDirectory.CreateDirectory(LLogArchive);
           LRollOver := TPath.Combine(LLogArchive, LRollOver);
-          TFile.Copy(TDXLogger.LogFileName, LRollOver, true);
+          TFile.Copy(TDXLogger.LogFileName, LRollOver, True);
           TFile.Delete(TDXLogger.LogFileName);
         end;
       except
