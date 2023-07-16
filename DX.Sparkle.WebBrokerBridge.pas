@@ -1,4 +1,4 @@
-unit DX.Web.WebBrokerBridge;
+unit DX.Sparkle.WebBrokerBridge;
 
 interface
 
