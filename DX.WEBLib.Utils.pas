@@ -9,8 +9,7 @@ uses
   web,
 
   WEBLib.Forms,
-  XData.web.Client,
-  DX.WEBLib.Logger;
+  XData.web.Client;
 
 type
   TXDataClientResponseHelper = class helper for TXDataClientResponse
@@ -25,14 +24,15 @@ type
     function NormalizedLocaleName: string;
   end;
 
+  TJSConsoleHelper = class helper for TJSConsole
+  public
+    // Only writes a log, in DEBUG mode
+    procedure debug(Obj1: JSValue);
+  end;
+
   TAppInfo = record
     class function Version: string; static;
     class function BuildTimeStamp: TDateTime; static;
-  end;
-
-  TAppErrorHandler = class(TObject)
-  public
-    class procedure AppError(Sender: TObject; AError: TApplicationError; var Handled: Boolean);
   end;
 
 function JSResponse(AValue: JSValue): TJSResponse;
@@ -116,32 +116,17 @@ begin
   result := LAppVersion;
 end;
 
-class procedure TAppErrorHandler.AppError(Sender: TObject; AError: TApplicationError; var Handled: Boolean);
-var
-  LError: string;
+{ TJSConsoleHelper }
+
+procedure TJSConsoleHelper.debug(Obj1: JSValue);
 begin
-  if not Handled then
-  begin
-    if Assigned(AError.AError) then
-      LError := AError.AError.ValueOfProperty('FMessage')
-    else
-    begin
-      LError := AError.AMessage;
-      DXLog(LError, TLogLevel.Error);
-    end;
 {$IFDEF DEBUG}
-    // Wir zeigen unhandled Exceptions nur im Debug mode an, um Kunden nicht zu erschrecken
 {$IFDEF PAS2JS}
-    asm
-      alert('Error: '+ LError);
-    end;
-{$ENDIF}
-{$ENDIF}
+  asm
+    console.debug(Obj1);
   end;
+{$ENDIF}
+{$ENDIF}
 end;
-
-initialization
-
-Application.OnError := TAppErrorHandler.AppError;
 
 end.

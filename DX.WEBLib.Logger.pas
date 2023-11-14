@@ -7,16 +7,16 @@ uses
   Data.DB,
 
   JS, jsdelphisystem,
-
   web,
-
 {$IFDEF PAS2JS}
   rtl.HTMLUtils,
 {$ENDIF}
-  WEBLib.TMSWEBUtils, WEBLib.Utils, WEBLib.IndexedDb;
+  WEBLib.TMSWEBUtils, WEBLib.Utils, WEBLib.IndexedDb,
+  WEBLib.Forms,
+  DX.WEBLib.Utils;
 
 type
-  TLogLevel = (Error, Info, Debug);
+  TLogLevel = (Error, Info, Warn, Debug);
 
 type
   TLogMessage = record
@@ -70,13 +70,10 @@ type
     procedure OpenDB;
   end;
 
-  TJSConsoleHelper = class helper for TJSConsole
+type
+  TAppErrorHandler = class(TObject)
   public
-    /// <summary>
-    /// Schreibt nur in der DEBUG Config in die Console
-    /// </summary>
-    procedure Debug(const AMessage: string);
-
+    class procedure AppError(Sender: TObject; AError: TApplicationError; var Handled: Boolean);
   end;
 
   /// <summary>
@@ -84,8 +81,6 @@ type
   /// </summary>
   [async]
 procedure DXLog(const AMessage: string; ALogLevel: TLogLevel = TLogLevel.Info);
-
-
 
 implementation
 
@@ -165,8 +160,7 @@ begin
       end
       else
       begin
-        LLog := LLog
-          + FormatDateTime('yyyy-mm-dd hh:nn:ss,zzz', FLogDB.FieldByName('LogTimestamp').AsDateTime) + ' : '
+        LLog := LLog + FormatDateTime('yyyy-mm-dd hh:nn:ss,zzz', FLogDB.FieldByName('LogTimestamp').AsDateTime) + ' : '
           + FLogDB.FieldByName('LogMessage').AsString + #13#10;
         FLogDB.Next;
       end;
@@ -200,8 +194,10 @@ begin
       console.Error(LLog.ToString);
     Info:
       console.Info(LLog.ToString);
+    Warn:
+      console.Warn(LLog.ToString);
     Debug:
-      console.Log(LLog.ToString);
+      console.Debug(LLog.ToString);
   end;
 
   // Und nun in die lokale DB des Browsers
@@ -295,13 +291,32 @@ begin
   end;
 end;
 
-{ TJSConsoleHelper }
-
-procedure TJSConsoleHelper.Debug(const AMessage: string);
+class procedure TAppErrorHandler.AppError(Sender: TObject; AError: TApplicationError; var Handled: Boolean);
+var
+  LError: string;
 begin
+  if not Handled then
+  begin
+    if Assigned(AError.AError) then
+      LError := AError.AError.ValueOfProperty('FMessage')
+    else
+    begin
+      LError := AError.AMessage;
+      DXLog(LError, TLogLevel.Error);
+    end;
 {$IFDEF DEBUG}
-  console.Log(AMessage);
+    // Wir zeigen unhandled Exceptions nur im Debug mode an, um Kunden nicht zu erschrecken
+{$IFDEF PAS2JS}
+    asm
+      alert('Error: '+ LError);
+    end;
 {$ENDIF}
+{$ENDIF}
+  end;
 end;
+
+initialization
+
+Application.OnError := TAppErrorHandler.AppError;
 
 end.

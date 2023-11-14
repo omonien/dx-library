@@ -8,7 +8,8 @@ uses
   Data.DB,
   XData.Web.JsonDataset,
   XData.Web.Dataset,
-  XData.Web.Client;
+  XData.Web.Client,
+  DX.WebLib.Utils;
 
 type
   /// <summary>
@@ -20,7 +21,10 @@ type
     /// RefreshData is very similiar to "Load", but offers an additional callback, once the dataset finished loading its data form the server. <br />
     /// </summary>
     [async]
-    procedure RefreshData(ADoneProc: TProc);
+    procedure RefreshData(ADoneProc: TProc); overload;
+
+    [async]
+    procedure RefreshData(const AServiceOperation: string; AParams: Array of JSValue; ADoneProc: TProc); overload;
   end;
 
 implementation
@@ -144,6 +148,41 @@ begin
   finally
     FreeAndNil(LClient);
   end;
+end;
+
+procedure TTXDataWebDataSetHelper.RefreshData(const AServiceOperation: string; AParams: Array of JSValue;
+  ADoneProc: TProc);
+var
+  LResponse: TXDataClientResponse;
+  LClient: TXDataWebClient;
+begin
+  if not Assigned(Connection) then
+  begin
+    console.error(Self.Name + ': Connection not assigned');
+    exit;
+  end;
+  Self.Close;
+  LClient := TXDataWebClient.Create(nil);
+  try
+    LClient.Connection := Self.Connection;
+    LResponse := XDataClientResponse(await(LClient.RawInvokeAsync(AServiceOperation, AParams)));
+    if LResponse.Response.StatusCode >= 300 then
+    begin
+      console.error(AServiceOperation + ': ' + LResponse.Response.StatusReason);
+      exit;
+    end;
+    // ResultValue ist ein Helper der das 'Value'-Objekt liefert.
+    Self.SetJsonData(LResponse.ResultValue);
+    Self.Open;
+    console.debug(AServiceOperation + ' RecCount: ' + Self.RecordCount.ToString);
+  finally
+    FreeAndNil(LClient);
+  end;
+  if Assigned(ADoneProc) then
+  begin
+    ADoneProc;
+  end;
+
 end;
 
 end.
