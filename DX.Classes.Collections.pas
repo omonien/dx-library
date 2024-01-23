@@ -17,7 +17,6 @@ type
   TListHelper<T> = class(TObject)
   protected
     class function CompareByProperty(Item1, Item2: T; Const APropertyName: string): integer;
-
   public
     /// <summary>
     /// RemoveDuplicates removes duplicates (in terms of instances of T) from
@@ -37,6 +36,12 @@ type
     ///   Number of total pages
     /// </returns>
     class function Paginate(AList: TList<T>; APage, APageSize: integer): integer; static;
+
+    /// <summary>
+    ///   Sorts the List by the given property of T
+    /// </summary>
+
+    class procedure SortByProperty(List: TList<T>; const APropertyName: string); static;
   end;
 
 implementation
