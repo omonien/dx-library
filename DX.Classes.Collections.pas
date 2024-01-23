@@ -7,7 +7,7 @@ unit DX.Classes.Collections;
 interface
 
 uses
-  System.Classes, System.SysUtils, System.Generics.Collections;
+  System.Classes, System.SysUtils, System.Generics.Defaults, System.Generics.Collections, System.RTTI;
 
 type
   /// <summary>
@@ -15,6 +15,9 @@ type
   /// functionality.
   /// </summary>
   TListHelper<T> = class(TObject)
+  protected
+    class function CompareByProperty(Item1, Item2: T; Const APropertyName: string): integer;
+
   public
     /// <summary>
     /// RemoveDuplicates removes duplicates (in terms of instances of T) from
@@ -43,6 +46,41 @@ uses
 
 { TListHelper<T> }
 
+class function TListHelper<T>.CompareByProperty(Item1, Item2: T; Const APropertyName: string): integer;
+var
+  Ctx: TRttiContext;
+  Prop: TRttiProperty;
+begin
+  Ctx := TRttiContext.Create;
+  try
+    var
+    LType := Ctx.GetType(TypeInfo(T));
+    Prop := LType.GetProperty(APropertyName);
+
+    if LType.IsRecord then
+      raise ENotImplemented.Create('CompareByProperty() not implemented for Records');
+    var
+    LItem1 := TObject(Pointer(Addr(Item1))^);
+    var
+    LItem2 := TObject(Pointer(Addr(Item2))^);
+    Result := CompareText(Prop.GetValue(LItem1).AsString, Prop.GetValue(LItem2).AsString);
+
+  finally
+    Ctx.Free;
+  end;
+end;
+
+class procedure TListHelper<T>.SortByProperty(List: TList<T>; const APropertyName: string);
+var
+  Comparer: IComparer<T>;
+begin
+  Comparer := TComparer<T>.Construct(
+    function(const Left, Right: T): integer
+    begin
+      Result := CompareByProperty(Left, Right, APropertyName);
+    end);
+  List.Sort(Comparer);
+end;
 
 class function TListHelper<T>.Paginate(AList: TList<T>; APage, APageSize: integer): integer;
 begin
