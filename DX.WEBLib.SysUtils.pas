@@ -96,7 +96,6 @@ begin
     LAppVersion = ProjectNameVersion; // Defined in index.html, catches ProjectName + Version
   end;
 {$ENDIF}
-  // Todo: Make generic
   // AppName_2_0_47
   LVersionPos := Pos('_', LAppVersion);
   if LVersionPos = 0 then
