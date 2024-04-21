@@ -89,6 +89,7 @@ end;
 class function TAppInfo.Version: string;
 var
   LAppVersion: string;
+  LVersionPos: integer;
 begin
 {$IFDEF PAS2JS}
   asm
@@ -96,8 +97,17 @@ begin
   end;
 {$ENDIF}
   // Todo: Make generic
-  // ELKE_Intra_2_0_47
-  LAppVersion := LAppVersion.Replace('ELKE_Intra_', '').Replace('_', '.');
+  // AppName_2_0_47
+  LVersionPos := Pos('_', LAppVersion);
+  if LVersionPos = 0 then
+  begin
+    LAppVersion := 'UNKNOWN';
+  end
+  else
+  begin
+    LAppVersion := Copy(LAppVersion, LVersionPos + 1, Length(LAppVersion) - LVersionPos);
+    LAppVersion := LAppVersion.Replace('_', '.');
+  end;
   result := LAppVersion;
 end;
 
@@ -116,13 +126,13 @@ end;
 
 procedure Assert(ACondition: boolean);
 begin
-  {$IFDEF DEBUG}
+{$IFDEF DEBUG}
   if not ACondition then
   begin
     console.Log('Assert failed');
     raise Exception.Create('Assert failed');
   end;
-  {$ENDIF}
+{$ENDIF}
 end;
 
 end.
