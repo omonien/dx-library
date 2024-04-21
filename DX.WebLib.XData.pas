@@ -27,6 +27,12 @@ type
     procedure RefreshData(const AServiceOperation: string; AParams: Array of JSValue; ADoneProc: TProc); overload;
   end;
 
+  TXDataClientResponseHelper = class helper for TXDataClientResponse
+    function ResultValue: JSValue;
+  end;
+
+  function XDataClientResponse(AValue: JSValue): TXDataClientResponse;
+
 implementation
 
 { TTXDataWebDataSetHelper }
@@ -183,6 +189,16 @@ begin
     ADoneProc;
   end;
 
+end;
+
+function XDataClientResponse(AValue: JSValue): TXDataClientResponse;
+begin
+  result := TXDataClientResponse(AValue);
+end;
+
+function TXDataClientResponseHelper.ResultValue: JSValue;
+begin
+  result := self.ResultAsObject['value'];
 end;
 
 end.
