@@ -77,7 +77,7 @@ type
   end;
 
   /// <summary>
-  /// Log procedure, that logs into console and InexedDB
+  /// Log procedure, that logs into console and IndexedDB
   /// </summary>
   [async]
 procedure DXLog(const AMessage: string; ALogLevel: TLogLevel = TLogLevel.Info);
