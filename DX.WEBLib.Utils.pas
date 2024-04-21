@@ -8,14 +8,9 @@ uses
   JS, jsdelphisystem,
   web,
 
-  WEBLib.Forms,
-  XData.web.Client;
+  WEBLib.Forms;
 
 type
-  TXDataClientResponseHelper = class helper for TXDataClientResponse
-    function ResultValue: JSValue;
-  end;
-
   TJSObjectHelper = class helper for TJSObject
     function ValueOfProperty(const APropertyName: string): string;
   end;
@@ -26,7 +21,7 @@ type
 
   TJSConsoleHelper = class helper for TJSConsole
   public
-    // Only writes a log, in DEBUG mode
+    // Writes a log only if in DEBUG mode
     procedure debug(Obj1: JSValue);
   end;
 
@@ -39,7 +34,7 @@ function JSResponse(AValue: JSValue): TJSResponse;
 
 function JSBlob(AValue: JSValue): TJSBlob;
 
-function XDataClientResponse(AValue: JSValue): TXDataClientResponse;
+procedure Assert(ACondition: boolean);
 
 implementation
 
@@ -54,16 +49,6 @@ end;
 function JSBlob(AValue: JSValue): TJSBlob;
 begin
   result := TJSBlob(AValue);
-end;
-
-function XDataClientResponse(AValue: JSValue): TXDataClientResponse;
-begin
-  result := TXDataClientResponse(AValue);
-end;
-
-function TXDataClientResponseHelper.ResultValue: JSValue;
-begin
-  result := self.ResultAsObject['value'];
 end;
 
 function TJSObjectHelper.ValueOfProperty(const APropertyName: string): string;
@@ -127,6 +112,17 @@ begin
   end;
 {$ENDIF}
 {$ENDIF}
+end;
+
+procedure Assert(ACondition: boolean);
+begin
+  {$IFDEF DEBUG}
+  if not ACondition then
+  begin
+    console.Log('Assert failed');
+    raise Exception.Create('Assert failed');
+  end;
+  {$ENDIF}
 end;
 
 end.
