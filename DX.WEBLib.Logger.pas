@@ -1,4 +1,4 @@
-unit DX.WEBLib.Logger;
+ï»¿unit DX.WEBLib.Logger;
 
 interface
 
@@ -13,7 +13,7 @@ uses
 {$ENDIF}
   WEBLib.TMSWEBUtils, WEBLib.Utils, WEBLib.IndexedDb,
   WEBLib.Forms,
-  DX.WEBLib.Utils;
+  DX.WEBLib.SysUtils;
 
 type
   TLogLevel = (Error, Info, Warn, Debug);
@@ -27,7 +27,7 @@ type
   end;
 
   /// <summary>
-  /// Zentrales Logging-System, dass auf die Konsole und in die lokale IndexedDB Instanz schreibt. Folgt dem Singleton Pattern. Keine manuelle Instanz bilden! <br /><br />Einfache Nutzung über
+  /// Zentrales Logging-System, dass auf die Konsole und in die lokale IndexedDB Instanz schreibt. Folgt dem Singleton Pattern. Keine manuelle Instanz bilden! <br /><br />Einfache Nutzung Ã¼ber
   /// DXLog()
   /// </summary>
   TDXLogger = class(TObject)
@@ -44,10 +44,10 @@ type
     [async]
     class procedure Log(const AMessage: string; ALogLevel: TLogLevel = TLogLevel.Info);
     /// <summary>
-    /// Liefert die Logdaten als String um Sie in einem Memo o.ä. anzuzeigen
+    /// Liefert die Logdaten als String um Sie in einem Memo o.Ã¤. anzuzeigen
     /// </summary>
     /// <param name="ADoneProc">
-    /// Callback für den Result.
+    /// Callback fÃ¼r den Result.
     /// </param>
     /// <param name="ATodayOnly">
     /// Nur heute oder alle Logs.
@@ -55,7 +55,7 @@ type
     [async]
     class procedure GetLog(ADoneProc: TProc<string>; ATodayOnly: Boolean = true);
     /// <summary>
-    /// Löscht die Daten in der Log-Tabelle derLogDB in der lokalen IndexedDB Instanz des Webbrowsers
+    /// LÃ¶scht die Daten in der Log-Tabelle derLogDB in der lokalen IndexedDB Instanz des Webbrowsers
     /// </summary>
     [async]
     class procedure ClearLogDb(ADoneProc: TProc);
@@ -168,7 +168,7 @@ begin
   end
   else
   begin
-    LLog := 'Log nicht verfügbar - Bitte erneut versuchen!';
+    LLog := 'Log nicht verfÃ¼gbar - Bitte erneut versuchen!';
   end;
   if Assigned(ADoneProc) then
   begin
@@ -188,7 +188,7 @@ begin
   LLog.TimeStamp := now;
   LLog.LogMessage := AMessage;
   LLog.LogLevel := ALogLevel;
-  // Zunächst in die console
+  // ZunÃ¤chst in die console
   case ALogLevel of
     Error:
       console.Error(LLog.ToString);
@@ -217,7 +217,7 @@ begin
   except
     on e: Exception do
     begin
-      // Wenn wir nicht in die DB loggen können, dann nix weiter tun
+      // Wenn wir nicht in die DB loggen kÃ¶nnen, dann nix weiter tun
       console.Error('Error writing to the LogDB ' + e.Message);
 
       if Assigned(FLogDB) and (FLogDB.State in dsEditModes) then
