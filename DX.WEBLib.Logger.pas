@@ -12,8 +12,7 @@ uses
   rtl.HTMLUtils,
 {$ENDIF}
   WEBLib.TMSWEBUtils, WEBLib.Utils, WEBLib.IndexedDb,
-  WEBLib.Forms,
-  DX.WEBLib.SysUtils;
+  WEBLib.Forms;
 
 type
   TLogLevel = (Error, Info, Warn, Debug);
@@ -84,6 +83,9 @@ procedure DXLog(const AMessage: string; ALogLevel: TLogLevel = TLogLevel.Info);
 
 implementation
 
+uses
+  DX.WEBLib.SysUtils;
+
 [async]
 function Sleep(AMSec: integer): integer;
 begin
@@ -136,7 +138,8 @@ begin
       FLogDB.Tag := 1;
     end);
 
-  Log('App startet ...');
+  Log('App startet...');
+  Log('Version: ' + TAppInfo.FullVersion);
 end;
 
 class destructor TDXLogger.Destroy;
@@ -191,13 +194,13 @@ begin
   // Zunächst in die console
   case ALogLevel of
     Error:
-      console.Error(LLog.ToString);
+      console.error(LLog.ToString);
     Info:
-      console.Info(LLog.ToString);
+      console.info(LLog.ToString);
     Warn:
-      console.Warn(LLog.ToString);
+      console.warn(LLog.ToString);
     Debug:
-      console.Debug(LLog.ToString);
+      console.debug(LLog.ToString);
   end;
 
   // Und nun in die lokale DB des Browsers
