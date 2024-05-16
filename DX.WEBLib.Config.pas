@@ -1,4 +1,4 @@
-unit DX.WEBLib.Config;
+﻿unit DX.WEBLib.Config;
 
 interface
 
@@ -6,7 +6,7 @@ uses
   System.Classes, System.SysUtils, System.IOUtils,
   JS, jsdelphisystem,
   web,
-  WEBLib.JSON, WEBLib.REST,
+  WEBLib.REST, WEBLib.JSON,
   DX.WEBLib.SysUtils;
 
 type
@@ -14,7 +14,7 @@ type
   private
     class var FInstance: TWebConfig;
     class var FConfigIsLoaded: boolean;
-    class procedure WaitForLoaded;static;
+    class procedure WaitForLoaded; static;
   private
     FConfigFileName: string;
     FConfigUrl: string;
@@ -28,7 +28,7 @@ type
     destructor Destroy; override;
   public
     class constructor Create;
-    class function Value(AKey: string): string; static;
+    class function Value(ASection: string; AKey: string): string; static;
   end;
 
 implementation
@@ -96,18 +96,28 @@ begin
     TLogLevel.Error);
 end;
 
-class function TWebConfig.Value(AKey: string): string;
+class function TWebConfig.Value(ASection: string; AKey: string): string;
+var
+  LSection: TJSONObject;
 begin
   WaitForLoaded;
-  Result := FInstance.FConfig.GetJSONValue(AKey);
+  LSection := FInstance.FConfig.GetValue(ASection) as TJSONObject;
+  if LSection <> nil then
+  begin
+    Result := LSection.GetJSONValue(AKey);
+  end
+  else
+  begin
+    Result := '';
+  end;
 end;
 
 class procedure TWebConfig.WaitForLoaded;
 begin
   while not FConfigIsLoaded do
   begin
-    //This really doesn't wait, as Sleep doesn't block. It's basically just switching context to give the
-    //supposedly still running GET request a chance to evetually complete
+    // This really doesn't wait, as Sleep doesn't block. It's basically just switching context to give the
+    // supposedly still running GET request a chance to evetually complete
     Sleep(1);
   end;
 end;

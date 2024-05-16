@@ -139,7 +139,7 @@ begin
     end);
 
   Log('App startet...');
-  Log('Version: ' + TAppInfo.FullVersion);
+  Log('Version: ' + TAppInfo.VersionFull);
 end;
 
 class destructor TDXLogger.Destroy;
