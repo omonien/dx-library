@@ -25,10 +25,18 @@ type
     procedure debug(Obj1: JSValue); reintroduce;
   end;
 
+  TVersion = record
+    Major: integer;
+    Minor: integer;
+    Build: integer;
+  end;
+
   TAppInfo = record
     class function BuildTimeStamp: TDateTime; static;
-    class function Version: string; static;
+    class function Version: TVersion; static;
     class function VersionShort: string; static;
+    class function VersionLong: string; static;
+
     class function VersionFull: string; static;
 
     class function IsPwa: Boolean; overload; static;
@@ -148,13 +156,17 @@ end;
 
 class function TAppInfo.VersionFull: string;
 begin
-  result := Format('Version: %s Build: %s', [Version, FormatDateTime('yyyymmddhhnnss', BuildTimeStamp)]);
+  result := Format('Version: %s Build: %s', [VersionLong, FormatDateTime('yyyymmddhhnnss', BuildTimeStamp)]);
+end;
+
+class function TAppInfo.VersionLong: string;
+begin
+  result := Format('%d.%d.%d', [Version.Major, Version.Minor, Version.Build]);
 end;
 
 class function TAppInfo.VersionShort: string;
 begin
-  // Todo:
-  result := Version;
+  result := Format('%d.%d', [Version.Major, Version.Minor]);
 end;
 
 class function TAppInfo.IsPwa(ATrueMessage, AFalseMessage: string): string;
@@ -189,10 +201,11 @@ begin
   result := LStandalone or Application.IsPwa;
 end;
 
-class function TAppInfo.Version: string;
+class function TAppInfo.Version: TVersion;
 var
   LAppVersion: string;
   LVersionPos: integer;
+  LVersionParts: TArray<string>;
 begin
 {$IFDEF PAS2JS}
   asm
@@ -210,8 +223,15 @@ begin
     LAppVersion := Copy(LAppVersion, LVersionPos + 1, Length(LAppVersion) - LVersionPos);
     LAppVersion := LAppVersion.Replace('_', '.');
   end;
-  // 2.0.1
-  result := LAppVersion;
+  result := Default (TVersion); // 0.0.0
+
+  LVersionParts := LAppVersion.Split(['.']);
+  if Length(LVersionParts) > 0 then
+    result.Major := LVersionParts[0].ToInteger;
+  if Length(LVersionParts) > 1 then
+    result.Minor := LVersionParts[1].ToInteger;
+  if Length(LVersionParts) > 2 then
+    result.Build := LVersionParts[2].ToInteger;
 end;
 
 { TJSConsoleHelper }
