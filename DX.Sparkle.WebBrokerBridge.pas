@@ -1,4 +1,4 @@
-unit DX.Sparkle.WebBrokerBridge;
+﻿unit DX.Sparkle.WebBrokerBridge;
 
 interface
 
@@ -643,33 +643,41 @@ begin
   var
   LSOAPEnvelope := TXMLDocument.Create(nil);
   try
-    // MSXMLDOM ist vermutlich besser/schneller, aber f�r OmniXML sind keine DLLs erforderlich!
-    // Und OpenXML funktioniert nicht richtig
-    LSOAPEnvelope.DOMVendor := GetDOMVendor(OmniXML4Factory.Description);
-    LSOAPEnvelope.LoadFromXML(Self.Content);
-    if not Assigned(LSOAPEnvelope.DOMDocument) or not Assigned(LSOAPEnvelope.DOMDocument.documentElement) then
-      raise Exception.Create('Kein SOAP-Envelope im Request gefunden!');
-    // <?xml version="1.0" encoding="UTF-8"?>
-    // <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
-    // <soapenv:Body>
-    // <v4:CreateTicket xmlns:v4="http://w
-    var
-    LRootNode := LSOAPEnvelope.DOMDocument.documentElement;
-    LSoapBody := FindChild(LRootNode, 'Body');
+    try
+      // MSXMLDOM ist vermutlich besser/schneller, aber für OmniXML sind keine DLLs erforderlich!
+      // Und OpenXML funktioniert nicht richtig
+      LSOAPEnvelope.DOMVendor := GetDOMVendor(OmniXML4Factory.Description);
+      LSOAPEnvelope.LoadFromXML(Self.Content);
+      if not Assigned(LSOAPEnvelope.DOMDocument) or not Assigned(LSOAPEnvelope.DOMDocument.documentElement) then
+        raise Exception.Create('Kein SOAP-Envelope im Request gefunden!');
+      // <?xml version="1.0" encoding="UTF-8"?>
+      // <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+      // <soapenv:Body>
+      // <v4:CreateTicket xmlns:v4="http://w
+      var
+      LRootNode := LSOAPEnvelope.DOMDocument.documentElement;
+      LSoapBody := FindChild(LRootNode, 'Body');
 
-    if not LSoapBody.hasChildNodes then
-      raise Exception.Create('SOAP-Envelope invalid');
+      if not LSoapBody.hasChildNodes then
+        raise Exception.Create('SOAP-Envelope invalid');
 
-    // Die erste Child-Node im Body ist die Action
-    var
-    LActionNode := LSoapBody.childNodes[0];
-    LAction := LActionNode.nodeName.Split([':'])[1];
-  finally
-    FreeAndNil(LSOAPEnvelope);
+      // Die erste Child-Node im Body ist die Action
+      var
+      LActionNode := LSoapBody.childNodes[0];
+      LAction := LActionNode.nodeName.Split([':'])[1];
+      Self.InjectHeader('soapaction', ASOAPNameSpace + LAction);
+    finally
+      FreeAndNil(LSOAPEnvelope);
+    end;
+  except
+    //Keine Exception werfen!
+    on E: Exception do
+    begin
+      Log('SOAP Error: ' + E.Message);
+    end;
   end;
-  Self.InjectHeader('soapaction', ASOAPNameSpace + LAction);
-
 end;
+
 function TSparkleRequest.ReadClient(
   var Buffer;
 Count: Integer): Integer;
