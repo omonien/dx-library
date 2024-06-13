@@ -108,6 +108,8 @@ type
     property ShowExceptionProc: TShowExceptionProc read FShowExceptionProc write SetShowExceptionProc;
   end;
 
+  TDXLogProc =  reference to procedure (const AMessage:string);
+
   /// <summary>
   /// Shortcut to log a message
   /// </summary>
