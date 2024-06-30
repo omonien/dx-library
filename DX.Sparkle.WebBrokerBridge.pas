@@ -1,4 +1,4 @@
-unit DX.Sparkle.WebBrokerBridge;
+﻿unit DX.Sparkle.WebBrokerBridge;
 
 interface
 
@@ -9,6 +9,14 @@ uses
   Sparkle.Security, Sparkle.HttpServer.Module;
 
 type
+
+  {$IF CompilerVersion >= 34.0 }
+  WebInt = Int64;  //Since 10.4 certain functions were lifted to Int64
+  {$ELSE}
+  WebInt = Integer;
+  {$ENDIF}
+
+
   ESWBException = class(Exception)
   end;
 
@@ -119,7 +127,7 @@ type
     // Used to cache response information, until the response gets finally constructed and sent
     FResponseCache: THttpSysResponseCache;
     function GetDateVariable(Index: Integer): TDateTime; override;
-    function GetIntegerVariable(Index: Integer): Int64; override;
+    function GetIntegerVariable(Index: Integer): WebInt; override;
     function GetRawContent: TBytes; override;
     function GetRawPathInfo: string; override;
     function GetRemoteIP: string; override;
@@ -135,6 +143,8 @@ type
     function WriteClient(var ABuffer; ACount: Integer): Integer; override;
     function WriteHeaders(StatusCode: Integer; const ReasonString, Headers: string): boolean; override;
     function WriteString(const AString: string): boolean; override;
+    procedure InjectHeader(const AHeader: string; const AValue: string); virtual;
+    procedure InjectSOAPActionHeader(const ASOAPNameSpace: string); virtual;
     // We are using a response cache, to buffer WriteXyz() operations until the actual response is written
     property ResponseCache: THttpSysResponseCache read FResponseCache;
     property RootPath: string read FRootPath write FRootPath;
@@ -151,7 +161,7 @@ type
     FLogMessage: String;
     function GetContent: string; override;
     function GetDateVariable(Index: Integer): TDateTime; override;
-    function GetIntegerVariable(Index: Integer): Int64; override;
+    function GetIntegerVariable(Index: Integer): WebInt; override;
     function GetLogMessage: string; override;
     function GetStatusCode: Integer; override;
     function GetStringVariable(Index: Integer): string; override;
@@ -163,7 +173,7 @@ type
       const Value: TDateTime); override;
     procedure SetIntegerVariable(
       Index: Integer;
-      Value: Int64); override;
+      Value: WebInt); override;
     procedure SetStatusCode(AValue: Integer); override;
     procedure SetStringVariable(
       Index: Integer;
@@ -183,7 +193,7 @@ implementation
 
 uses
   System.Rtti, System.NetEncoding,
-
+  Xml.xmldom, Xml.XMLIntf, Xml.XMLDoc, Xml.adomxmldom, Xml.Win.msxmldom, Xml.omnixmldom,
   Sparkle.URI, Sparkle.Middleware.Compress,
   DX.Sparkle.Utils, DX.Utils.Logger;
 
@@ -479,7 +489,7 @@ begin
   result := result.Trim;
 end;
 
-function TSparkleRequest.GetIntegerVariable(Index: Integer): Int64;
+function TSparkleRequest.GetIntegerVariable(Index: Integer): WebInt;
 begin
   result := StrToIntDef(string(GetStringVariable(Index)), -1)
 end;
@@ -591,6 +601,83 @@ begin
   result := LValue.Trim;
 end;
 
+procedure TSparkleRequest.InjectHeader(const AHeader, AValue: string);
+begin
+  var
+  i := FHeaderFields.IndexOfName(AHeader);
+  if i >= 0 then
+  begin
+    // Die Header sind als TSTringlist implementiert und sortiert
+    // Sortierte Stringlisten lassen sich schlecht manipulieren
+    (FHeaderFields as TStringList).Sorted := false;
+    FHeaderFields.Values[AHeader] := AValue;
+    (FHeaderFields as TStringList).Sorted := true;
+  end
+  else
+  begin
+    FHeaderFields.AddPair(AHeader, AValue);
+  end;
+end;
+procedure TSparkleRequest.InjectSOAPActionHeader(const ASOAPNameSpace: string);
+  function FindChild(ARoot: IDOMNode; const ANodeName: string):IDOMNode;
+  var
+    LChild: IDOMNode;
+    LResult: IDOMNode;
+  begin
+    for var i := 0 to ARoot.childNodes.Length - 1 do
+    begin
+      LChild := ARoot.childNodes[i];
+      if LChild.nodeName.EndsWith(ANodeName) then
+      begin
+        LResult := LChild;
+      end;
+    end;
+    if not Assigned(LResult) then
+      raise Exception.Create('Invalid SOAP-Envelope - ' + ANodeName + ' not found!');
+    result := LResult;
+  end;
+var
+  LAction: string;
+  LSoapBody: IDOMNode;
+begin
+  var
+  LSOAPEnvelope := TXMLDocument.Create(nil);
+  try
+    try
+      // MSXMLDOM ist vermutlich besser/schneller, aber für OmniXML sind keine DLLs erforderlich!
+      // Und OpenXML funktioniert nicht richtig
+      LSOAPEnvelope.DOMVendor := GetDOMVendor(OmniXML4Factory.Description);
+      LSOAPEnvelope.LoadFromXML(Self.Content);
+      if not Assigned(LSOAPEnvelope.DOMDocument) or not Assigned(LSOAPEnvelope.DOMDocument.documentElement) then
+        raise Exception.Create('Kein SOAP-Envelope im Request gefunden!');
+      // <?xml version="1.0" encoding="UTF-8"?>
+      // <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+      // <soapenv:Body>
+      // <v4:CreateTicket xmlns:v4="http://w
+      var
+      LRootNode := LSOAPEnvelope.DOMDocument.documentElement;
+      LSoapBody := FindChild(LRootNode, 'Body');
+
+      if not LSoapBody.hasChildNodes then
+        raise Exception.Create('SOAP-Envelope invalid');
+
+      // Die erste Child-Node im Body ist die Action
+      var
+      LActionNode := LSoapBody.childNodes[0];
+      LAction := LActionNode.nodeName.Split([':'])[1];
+      Self.InjectHeader('soapaction', ASOAPNameSpace + LAction);
+    finally
+      FreeAndNil(LSOAPEnvelope);
+    end;
+  except
+    //Keine Exception werfen!
+    on E: Exception do
+    begin
+      Log('SOAP Error: ' + E.Message);
+    end;
+  end;
+end;
+
 function TSparkleRequest.ReadClient(
   var Buffer;
 Count: Integer): Integer;
@@ -675,7 +762,7 @@ begin
 
 end;
 
-function TSparkleResponse.GetIntegerVariable(Index: Integer): Int64;
+function TSparkleResponse.GetIntegerVariable(Index: Integer): WebInt;
 begin
   case Index of
     INDEX_RESP_ContentLength:
@@ -847,7 +934,7 @@ begin
   end;
 end;
 
-procedure TSparkleResponse.SetIntegerVariable(Index: Integer; Value: Int64);
+procedure TSparkleResponse.SetIntegerVariable(Index: Integer; Value: WebInt);
 begin
   case Index of
     INDEX_RESP_ContentLength:
