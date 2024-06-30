@@ -16,11 +16,15 @@ Type
   end;
 
   TConfigEntry = record
+  private
+    function GetKey: string;
+  public
     Name: string;
     Description: StringList;
     Section: string;
     Default: string;
     IsEncrypted: Boolean;
+    property Key: string read GetKey;
     procedure AssignDescription(AProperty: TRttiProperty);
     constructor Create(const AName: string);
   end;
@@ -110,7 +114,8 @@ Type
   public
     constructor Create;
     destructor Destroy; override;
-    procedure WriteStorage;
+    procedure WriteStorage; deprecated 'Use method Save()';
+    procedure Save;
     property EncryptionKey: string write FEncryptionKey;
     property Filename: string read FStorageFile;
     property Encoding: TEncoding read GetEncoding write SetEncoding;
@@ -304,6 +309,12 @@ begin
   end;
 end;
 
+procedure TConfigurationManager<T>.Save;
+begin
+  FStorage.UpdateFile;
+  WriteDescription;
+end;
+
 procedure TConfigurationManager<T>.SetConfigValueForProperty(
   const AProperty: string;
   AValue: Variant);
@@ -380,8 +391,7 @@ end;
 
 procedure TConfigurationManager<T>.WriteStorage;
 begin
-  FStorage.UpdateFile;
-  WriteDescription;
+  Save;
 end;
 
 procedure TConfigurationManager<T>.WriteDescription;
@@ -476,6 +486,11 @@ begin
   Description.Clear;
   Default := '';
   Section := '';
+end;
+
+function TConfigEntry.GetKey: string;
+begin
+  result := Section.Trim.ToLower + '/' + Name.Trim.ToLower;
 end;
 
 { ConfigFileAttribute }

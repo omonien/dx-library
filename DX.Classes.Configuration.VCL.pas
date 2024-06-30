@@ -19,10 +19,11 @@ type
     FConfig: IConfiguration;
   protected
     procedure LoadConfig;
+    procedure SaveConfig;
   public
     procedure Show; reintroduce; overload;
   public
-    class procedure Show<I: IConfiguration>(AConfig: I); overload;
+    class procedure Show(AConfig: IConfiguration); overload;
   end;
 
 implementation
@@ -52,8 +53,8 @@ begin
         FConfig.Configuration.ReadSection(LSection, LKeys);
         for var LKey in LKeys do
         begin
-          ListboxKeyValues.Strings.AddPair(LSection + ' / ' + LKey, FConfig.Configuration.ReadString(LSection,
-            LKey, ''));
+          ListboxKeyValues.Values[LSection + '/' + LKey] := FConfig.Configuration.ReadString(LSection, LKey, '');
+          // ListboxKeyValues.Strings.AddPair(LSection + ' / ' + LKey, FConfig.Configuration.ReadString(LSection, LKey, ''));
         end;
       finally
         FreeAndNil(LKeys);
@@ -74,7 +75,12 @@ begin
   LoadConfig;
 end;
 
-class procedure TConfigurationUI.Show<I>(AConfig: I);
+procedure TConfigurationUI.SaveConfig;
+begin
+
+end;
+
+class procedure TConfigurationUI.Show(AConfig: IConfiguration);
 begin
   if FInstance = nil then
   begin
