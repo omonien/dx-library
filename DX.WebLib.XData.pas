@@ -9,7 +9,7 @@ uses
   XData.Web.JsonDataset,
   XData.Web.Dataset,
   XData.Web.Client,
-  DX.WebLib.Utils;
+  DX.WebLib.SysUtils;
 
 type
   /// <summary>

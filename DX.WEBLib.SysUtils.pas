@@ -31,12 +31,19 @@ type
     Build: integer;
   end;
 
+  /// <summary>TAppInfo returns the app's version information.
+  /// Put this into the project's index.html file, just before rtl.run() :
+  /// ProjectNameVersion="$(ProjectName)";  //Captures project name AND version
+  /// </summary>
   TAppInfo = record
     class function BuildTimeStamp: TDateTime; static;
     class function Version: TVersion; static;
     class function VersionShort: string; static;
     class function VersionLong: string; static;
 
+    /// <summary>
+    /// Shows a fully formatted version string: "Version 1.0 Build: 20240701"
+    /// </summary>
     class function VersionFull: string; static;
 
     class function IsPwa: Boolean; overload; static;
@@ -207,16 +214,23 @@ var
   LVersionPos: integer;
   LVersionParts: TArray<string>;
 begin
+  // Put this into the project's index.html file, just before rtl.run();
+  // ProjectNameVersion="$(ProjectName)";  //Captures project name AND version
+
 {$IFDEF PAS2JS}
   asm
-    LAppVersion = ProjectNameVersion; // Defined in index.html, catches ProjectName + Version
+    if (typeof ProjectNameVersion !== 'undefined') {
+    LAppVersion = ProjectNameVersion;
+    } else {
+    LAppVersion = "WebApp_0_0_0";
+    }
   end;
 {$ENDIF}
   // AppName_2_0_47
   LVersionPos := Pos('_', LAppVersion);
   if LVersionPos = 0 then
   begin
-    LAppVersion := 'UNKNOWN';
+    LAppVersion := 'WebApp_0_0_0'; // unexpected value in LAppVersion
   end
   else
   begin
@@ -238,13 +252,13 @@ end;
 
 procedure TJSConsoleHelper.debug(Obj1: JSValue);
 begin
-  { .$IFDEF debug }
+{$IFDEF debug }
 {$IFDEF PAS2JS}
   asm
     console.debug(Obj1);
   end;
 {$ENDIF}
-  { .$ENDIF }
+{$ENDIF }
 end;
 
 procedure Assert(ACondition: Boolean);

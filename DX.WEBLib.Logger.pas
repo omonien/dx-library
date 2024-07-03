@@ -69,7 +69,6 @@ type
     procedure OpenDB;
   end;
 
-type
   TAppErrorHandler = class(TObject)
   public
     class procedure AppError(Sender: TObject; AError: TApplicationError; var Handled: Boolean);
@@ -81,17 +80,20 @@ type
   [async]
 procedure DXLog(const AMessage: string; ALogLevel: TLogLevel = TLogLevel.Info);
 
+[async]
+function Sleep(AMSec: integer): integer;
+
 implementation
 
 uses
   DX.WEBLib.SysUtils;
 
-[async]
 function Sleep(AMSec: integer): integer;
 begin
   result := AMSec;
 {$IFDEF PAS2JS}
-  await(Boolean, asyncsleep(AMSec));
+  // await(Boolean, asyncsleep(AMSec));
+  asyncsleep(AMSec);
 {$ENDIF}
 end;
 
@@ -150,7 +152,7 @@ class procedure TDXLogger.GetLog(ADoneProc: TProc<string>; ATodayOnly: Boolean =
 var
   LLog: string;
 begin
-  await(OpenLogDB);
+  // await(OpenLogDB);
   if FLogDB.Active then
   begin
     FLogDB.First;
@@ -194,13 +196,14 @@ begin
   // Zunächst in die console
   case ALogLevel of
     Error:
-      console.error(LLog.ToString);
+      console.Error(LLog.ToString);
     Info:
-      console.info(LLog.ToString);
+      console.Info(LLog.ToString);
     Warn:
-      console.warn(LLog.ToString);
+      console.Warn(LLog.ToString);
     Debug:
-      console.debug(LLog.ToString);
+
+      console.Debug(LLog.ToString);
   end;
 
   // Und nun in die lokale DB des Browsers
@@ -210,7 +213,7 @@ end;
 class procedure TDXLogger.LogToDB(const ALog: TLogMessage);
 begin
   try
-    await(OpenLogDB);
+    // await(OpenLogDB);
     if not FLogDB.Active then
       exit;
     FLogDB.Insert;
@@ -317,6 +320,16 @@ begin
 {$ENDIF}
   end;
 end;
+
+{ TJSConsoleHelper }
+
+{$IFNDEF PAS2JS}
+
+procedure TJSConsoleHelper.Debug(Obj1: JSValue);
+begin
+  // nothing: just a helper for LSP. Missing in Web.TJSConsole
+end;
+{$ENDIF}
 
 initialization
 

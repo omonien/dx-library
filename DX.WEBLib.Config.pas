@@ -13,8 +13,6 @@ type
   TWebConfig = class(TObject)
   private
     class var FInstance: TWebConfig;
-    class var FConfigIsLoaded: boolean;
-    class procedure WaitForLoaded; static;
   private
     FConfigFileName: string;
     FConfigUrl: string;
@@ -40,7 +38,6 @@ uses
 
 class constructor TWebConfig.Create;
 begin
-  FConfigIsLoaded := false;
   FInstance := TWebConfig.Create;
   FInstance.Load;
 end;
@@ -74,7 +71,6 @@ begin
         LResponse := AResponse;
         // Not a leak - we are in Javascript at the end of the day
         FConfig := TJSON.Create.Parse(LResponse) as TJSONObject;
-        FConfigIsLoaded := true;
         DXLog(FConfigFileName + ' wurde geladen.');
       end
       else
@@ -100,7 +96,6 @@ class function TWebConfig.Value(ASection: string; AKey: string): string;
 var
   LSection: TJSONObject;
 begin
-  WaitForLoaded;
   LSection := FInstance.FConfig.GetValue(ASection) as TJSONObject;
   if LSection <> nil then
   begin
@@ -112,14 +107,6 @@ begin
   end;
 end;
 
-class procedure TWebConfig.WaitForLoaded;
-begin
-  while not FConfigIsLoaded do
-  begin
-    // This really doesn't wait, as Sleep doesn't block. It's basically just switching context to give the
-    // supposedly still running GET request a chance to evetually complete
-    Sleep(1);
-  end;
-end;
+
 
 end.
