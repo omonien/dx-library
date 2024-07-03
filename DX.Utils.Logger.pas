@@ -624,6 +624,7 @@ procedure TLogThread.UpdateExternalStrings;
 var
   s: string;
 begin
+  //Todo: synchronize to main thread. Offer config option
   if (TDXLogger.Instance <> nil) and Assigned(TDXLogger.Instance.FExternalStrings) and Assigned(FExternalBuffer) and
     not TDXLogger.FTerminating then
   begin
