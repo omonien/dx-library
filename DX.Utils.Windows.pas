@@ -41,6 +41,15 @@ function GetExeVersion: String; overload;
 /// </Summary>
 function GetExeVersion(const AFilename: string): String; overload;
 
+/// <Summary>
+/// Retrieves a version info string in the following format:
+///
+/// Productname - Exe Name
+/// Version: 0.0.0.0
+/// Build Timestamp: yyyy.mm.dd hh:mm:ss
+/// </Summary>
+function GetExeVersionFullInfo: String; overload;
+
 function ExecuteProcess(const AFilename, AParams: string; AFolder: string; AWaitUntilTerminated: boolean;
   var ExitCode: integer): boolean;
 
@@ -289,6 +298,17 @@ begin
   finally
     FreeMem(LBuffer);
   end;
+end;
+
+function GetExeVersionFullInfo: String;
+begin
+  /// Productname - Exe Name
+  /// Version: 0.0.0.0
+  /// Build Timestamp: yyyy.mm.dd hh:mm:ss
+  result := Format('%s - %s', [GetExeVersionData.ProductName, ParamStr(0)]);
+  result := result + #13#10 + Format('Version : %s', [GetExeVersion]);
+  result := result + #13#10 + Format('Build Timestamp : %s',
+    [FormatDateTime('yyyy.mm.dd hh:mm:ss', GetExeBuildTimestamp)]);
 end;
 
 end.
