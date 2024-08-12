@@ -212,6 +212,7 @@ end;
 class destructor TDXLogger.Destroy;
 begin
   //Wait until all logs are written
+  Sleep(300);
   while WaitForLogBuffer and not LogBufferEmpty do
   begin
     sleep(1);
@@ -543,7 +544,7 @@ var
   LMaxAge: integer;
 begin
   // Only try once a day to roll over
-  if FLastRollOver < Today then
+  if not Terminated and (FLastRollOver < Today) then
   begin
     LMaxAge := TDXLogger.MaxLogAge;
     if LMaxAge > 0 then
@@ -654,3 +655,4 @@ begin
 end;
 
 end.
+
