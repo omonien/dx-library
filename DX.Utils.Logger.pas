@@ -347,9 +347,11 @@ begin
 end;
 
 class procedure TDXLogger.SetLogFilename(const Value: string);
+var
+  LDir : string;
 begin
   FLogFileName := Value;
-  var LDir := TPath.GetDirectoryName(FLogFileName);
+  LDir := TPath.GetDirectoryName(FLogFileName);
   if not TDirectory.Exists(LDir) then
   begin
     try
