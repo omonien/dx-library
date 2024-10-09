@@ -277,7 +277,7 @@ begin
   end;
   if FStorage.Modified then
   begin
-    WriteStorage;
+    Save;
   end;
 end;
 
