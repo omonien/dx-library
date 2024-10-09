@@ -13,21 +13,18 @@ type
   TWebConfig = class(TObject)
   private
     class var FInstance: TWebConfig;
-    class var FConfigIsLoaded: boolean;
-    class procedure WaitForLoaded; static;
   private
     FConfigFileName: string;
     FConfigUrl: string;
     FConfig: TJSONObject;
     FRequest: TWebHttpRequest;
   protected
-    procedure Load;
     procedure LogLoadError(ARequest: TJSXMLHttpRequest);
   public
-    constructor Create;
+    constructor Create(ALoadedProc: TProc);
     destructor Destroy; override;
   public
-    class constructor Create;
+    class procedure Load(ALoadedProc: TProc = nil);
     class function Value(ASection: string; AKey: string): string; static;
   end;
 
@@ -36,34 +33,16 @@ implementation
 uses
   WEBLib.Forms, DX.WEBLib.Logger;
 
-{ TWebConfig }
-
-class constructor TWebConfig.Create;
+constructor TWebConfig.Create(ALoadedProc: TProc);
+var
+  LResponse: string;
 begin
-  FConfigIsLoaded := false;
-  FInstance := TWebConfig.Create;
-  FInstance.Load;
-end;
-
-constructor TWebConfig.Create;
-begin
+  DXLog('WebConfig initializing ...');
   FConfigFileName := 'WebConfig.json';
   FConfigUrl := TAppInfo.BaseURL + FConfigFileName;
   FConfig := TJSONObject.Create;
   FRequest := TWebHttpRequest.Create(nil);
-end;
 
-destructor TWebConfig.Destroy;
-begin
-  FreeAndNil(FRequest);
-  FreeAndNil(FConfig);
-  inherited;
-end;
-
-procedure TWebConfig.Load;
-var
-  LResponse: string;
-begin
   FRequest.URL := FConfigUrl;
   FRequest.Command := THTTPCommand.httpGET;
   FRequest.Execute(
@@ -74,8 +53,12 @@ begin
         LResponse := AResponse;
         // Not a leak - we are in Javascript at the end of the day
         FConfig := TJSON.Create.Parse(LResponse) as TJSONObject;
-        FConfigIsLoaded := true;
-        DXLog(FConfigFileName + ' wurde geladen.');
+        DXLog(FConfigFileName + ' loaded successfully.');
+        if Assigned(ALoadedProc) then
+        begin
+          DXLog('Executing LoadedProc...', TLogLevel.Debug);
+          ALoadedProc;
+        end;
       end
       else
       begin
@@ -88,11 +71,24 @@ begin
       LResponse := '';
       LogLoadError(ARequest);
     end);
+
+end;
+
+destructor TWebConfig.Destroy;
+begin
+  FreeAndNil(FRequest);
+  FreeAndNil(FConfig);
+  inherited;
+end;
+
+class procedure TWebConfig.Load(ALoadedProc: TProc);
+begin
+  FInstance := TWebConfig.Create(ALoadedProc);
 end;
 
 procedure TWebConfig.LogLoadError(ARequest: TJSXMLHttpRequest);
 begin
-  DXLog('Fehler [' + ARequest.Status.ToString + '] beim Laden von ' + FConfigFileName + ' ' + FConfigUrl,
+  DXLog('Error [' + ARequest.Status.ToString + '] while attempting to load ' + FConfigFileName + ' ' + FConfigUrl,
     TLogLevel.Error);
 end;
 
@@ -100,26 +96,18 @@ class function TWebConfig.Value(ASection: string; AKey: string): string;
 var
   LSection: TJSONObject;
 begin
-  WaitForLoaded;
+  result := '';
+  if FInstance = nil then
+  begin
+    DXLog('TWebConfig not loaded!', TLogLevel.Error);
+    exit;
+  end;
   LSection := FInstance.FConfig.GetValue(ASection) as TJSONObject;
   if LSection <> nil then
   begin
-    Result := LSection.GetJSONValue(AKey);
-  end
-  else
-  begin
-    Result := '';
+    result := LSection.GetJSONValue(AKey);
   end;
-end;
-
-class procedure TWebConfig.WaitForLoaded;
-begin
-  while not FConfigIsLoaded do
-  begin
-    // This really doesn't wait, as Sleep doesn't block. It's basically just switching context to give the
-    // supposedly still running GET request a chance to evetually complete
-    Sleep(1);
-  end;
+  DXLog('TWebConfig loaded %s/%s  =  %s', [ASection, AKey, result], TLogLevel.Debug);
 end;
 
 end.

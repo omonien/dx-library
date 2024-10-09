@@ -212,6 +212,7 @@ end;
 class destructor TDXLogger.Destroy;
 begin
   //Wait until all logs are written
+  Sleep(300);
   while WaitForLogBuffer and not LogBufferEmpty do
   begin
     sleep(1);
@@ -347,9 +348,11 @@ begin
 end;
 
 class procedure TDXLogger.SetLogFilename(const Value: string);
+var
+  LDir : string;
 begin
   FLogFileName := Value;
-  var LDir := TPath.GetDirectoryName(FLogFileName);
+  LDir := TPath.GetDirectoryName(FLogFileName);
   if not TDirectory.Exists(LDir) then
   begin
     try
@@ -541,7 +544,7 @@ var
   LMaxAge: integer;
 begin
   // Only try once a day to roll over
-  if FLastRollOver < Today then
+  if not Terminated and (FLastRollOver < Today) then
   begin
     LMaxAge := TDXLogger.MaxLogAge;
     if LMaxAge > 0 then
@@ -624,6 +627,7 @@ procedure TLogThread.UpdateExternalStrings;
 var
   s: string;
 begin
+  //Todo: synchronize to main thread. Offer config option
   if (TDXLogger.Instance <> nil) and Assigned(TDXLogger.Instance.FExternalStrings) and Assigned(FExternalBuffer) and
     not TDXLogger.FTerminating then
   begin
@@ -651,3 +655,4 @@ begin
 end;
 
 end.
+

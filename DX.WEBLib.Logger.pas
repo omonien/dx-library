@@ -26,36 +26,70 @@ type
   end;
 
   /// <summary>
-  /// Zentrales Logging-System, dass auf die Konsole und in die lokale IndexedDB Instanz schreibt. Folgt dem Singleton Pattern. Keine manuelle Instanz bilden! <br /><br />Einfache Nutzung über
-  /// DXLog()
+  /// Logging system that writes to the console and to the local IndexedDB instance.
+  /// Follows the Singleton pattern. Do not create an instance manually!
+  /// <br /><br />
+  /// Simple usage via DXLog()
   /// </summary>
   TDXLogger = class(TObject)
   private
     class var FLogDB: TWebIndexedDbClientDataset;
   protected
     [async]
+    /// <summary>
+    /// Logs a message to the database.
+    /// </summary>
+    /// <param name="ALog">
+    /// The log message to be written to the database.
+    /// </param>
     class procedure LogToDB(const ALog: TLogMessage);
+
     [async]
+    /// <summary>
+    /// Opens the log database.
+    /// </summary>
     class procedure OpenLogDB;
   public
-    class constructor Create;
-    class destructor Destroy;
-    [async]
-    class procedure Log(const AMessage: string; ALogLevel: TLogLevel = TLogLevel.Info);
     /// <summary>
-    /// Liefert die Logdaten als String um Sie in einem Memo o.ä. anzuzeigen
+    /// Class constructor.
+    /// </summary>
+    class constructor Create;
+
+    /// <summary>
+    /// Class destructor.
+    /// </summary>
+    class destructor Destroy;
+
+    [async]
+    /// <summary>
+    /// Logs a message with a specified log level.
+    /// </summary>
+    /// <param name="AMessage">
+    /// The message to log.
+    /// </param>
+    /// <param name="ALogLevel">
+    /// The level of the log message. Defaults to Info.
+    /// </param>
+    class procedure Log(const AMessage: string; ALogLevel: TLogLevel = TLogLevel.Info);
+
+    /// <summary>
+    /// Retrieves log data as a string for display in a memo or similar component.
     /// </summary>
     /// <param name="ADoneProc">
-    /// Callback für den Result.
+    /// Callback for the result.
     /// </param>
     /// <param name="ATodayOnly">
-    /// Nur heute oder alle Logs.
+    /// Indicates whether to retrieve only today's logs or all logs.
     /// </param>
     [async]
     class procedure GetLog(ADoneProc: TProc<string>; ATodayOnly: Boolean = true);
+
     /// <summary>
-    /// Löscht die Daten in der Log-Tabelle derLogDB in der lokalen IndexedDB Instanz des Webbrowsers
+    /// Clears the log table data in the logDB in the local IndexedDB instance of the web browser.
     /// </summary>
+    /// <param name="ADoneProc">
+    /// Callback for the completion of the clear operation.
+    /// </param>
     [async]
     class procedure ClearLogDb(ADoneProc: TProc);
   end;
@@ -69,7 +103,6 @@ type
     procedure OpenDB;
   end;
 
-type
   TAppErrorHandler = class(TObject)
   public
     class procedure AppError(Sender: TObject; AError: TApplicationError; var Handled: Boolean);
@@ -79,25 +112,42 @@ type
   /// Log procedure, that logs into console and IndexedDB
   /// </summary>
   [async]
-procedure DXLog(const AMessage: string; ALogLevel: TLogLevel = TLogLevel.Info);
+procedure DXLog(const AMessage: string; ALogLevel: TLogLevel = TLogLevel.Info); overload;
+
+/// <summary>
+/// Log overload with Format String
+/// </summary>
+procedure DXLog(const AFmtMessage: string; const AArgs: array of const; ALogLevel: TLogLevel = TLogLevel.Info);
+  overload;
+
+[async]
+function Sleep(AMSec: integer): integer;
 
 implementation
 
 uses
   DX.WEBLib.SysUtils;
 
-[async]
 function Sleep(AMSec: integer): integer;
 begin
   result := AMSec;
 {$IFDEF PAS2JS}
-  await(Boolean, asyncsleep(AMSec));
+  // await(Boolean, asyncsleep(AMSec));
+  asyncsleep(AMSec);
 {$ENDIF}
 end;
 
 procedure DXLog(const AMessage: string; ALogLevel: TLogLevel = TLogLevel.Info);
 begin
   TDXLogger.Log(AMessage, ALogLevel);
+end;
+
+procedure DXLog(const AFmtMessage: string; const AArgs: array of const; ALogLevel: TLogLevel = TLogLevel.Info);
+var
+  LMessage: string;
+begin
+  LMessage := Format(AFmtMessage, AArgs);
+  DXLog(LMessage, ALogLevel);
 end;
 
 { TDXLogger }
@@ -138,8 +188,8 @@ begin
       FLogDB.Tag := 1;
     end);
 
-  Log('App startet...');
-  Log('Version: ' + TAppInfo.VersionFull);
+  Log('App is starting ...');
+  Log(TAppInfo.VersionFull);
 end;
 
 class destructor TDXLogger.Destroy;
@@ -150,7 +200,7 @@ class procedure TDXLogger.GetLog(ADoneProc: TProc<string>; ATodayOnly: Boolean =
 var
   LLog: string;
 begin
-  await(OpenLogDB);
+  // await(OpenLogDB);
   if FLogDB.Active then
   begin
     FLogDB.First;
@@ -171,7 +221,7 @@ begin
   end
   else
   begin
-    LLog := 'Log nicht verfügbar - Bitte erneut versuchen!';
+    LLog := 'Log not available yet!';
   end;
   if Assigned(ADoneProc) then
   begin
@@ -183,7 +233,7 @@ class procedure TDXLogger.Log(const AMessage: string; ALogLevel: TLogLevel = TLo
 var
   LLog: TLogMessage;
 begin
-  // LogLevel DEBUG schreibt NUR im DEBUG Modus in den Log!
+  // TLogLevel.Debug only writes to the log, when in DEBUG configuration
 {$IFNDEF DEBUG}
   if ALogLevel = TLogLevel.Debug then
     exit;
@@ -191,26 +241,25 @@ begin
   LLog.TimeStamp := now;
   LLog.LogMessage := AMessage;
   LLog.LogLevel := ALogLevel;
-  // Zunächst in die console
+  // First, write to console
   case ALogLevel of
     Error:
-      console.error(LLog.ToString);
+      console.Error(LLog.ToString);
     Info:
-      console.info(LLog.ToString);
+      console.Info(LLog.ToString);
     Warn:
-      console.warn(LLog.ToString);
+      console.Warn(LLog.ToString);
     Debug:
-      console.debug(LLog.ToString);
+      console.Debug(LLog.ToString);
   end;
 
-  // Und nun in die lokale DB des Browsers
+  // Now, write to db.
   LogToDB(LLog);
 end;
 
 class procedure TDXLogger.LogToDB(const ALog: TLogMessage);
 begin
   try
-    await(OpenLogDB);
     if not FLogDB.Active then
       exit;
     FLogDB.Insert;
@@ -220,7 +269,7 @@ begin
   except
     on e: Exception do
     begin
-      // Wenn wir nicht in die DB loggen können, dann nix weiter tun
+      // If we cannot write to the db, then there is nothing we can do
       console.Error('Error writing to the LogDB ' + e.Message);
 
       if Assigned(FLogDB) and (FLogDB.State in dsEditModes) then
@@ -308,7 +357,7 @@ begin
       DXLog(LError, TLogLevel.Error);
     end;
 {$IFDEF DEBUG}
-    // Wir zeigen unhandled Exceptions nur im Debug mode an, um Kunden nicht zu erschrecken
+    // let unhandled exceptions pop up only in DEBUG mode!
 {$IFDEF PAS2JS}
     asm
       alert('Error: '+ LError);
@@ -317,6 +366,17 @@ begin
 {$ENDIF}
   end;
 end;
+
+{ TJSConsoleHelper }
+
+{$IFNDEF PAS2JS}
+
+
+procedure TJSConsoleHelper.Debug(Obj1: JSValue);
+begin
+  // nothing: just a helper for LSP. Missing in Web.TJSConsole
+end;
+{$ENDIF}
 
 initialization
 
