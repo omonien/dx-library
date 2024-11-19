@@ -132,7 +132,7 @@ type
     [async]
     procedure ExportExcel(const AFileName: string; ADoneProc: TProc = nil);
     /// <summary>
-    /// Die Copy (to Clipboard) Funktion wird offenbar nicht mehr von allen Browsern in allen Szenarien unterstützt. Vermutlich ein Rechteproblem. Daher nicht "bewerben"
+    /// Die Copy (to Clipboard) Funktion wird offenbar nicht mehr von allen Browsern in allen Szenarien unterstÃ¼tzt. Vermutlich ein Rechteproblem. Daher nicht "bewerben"
     /// </summary>
     [async]
     procedure Copy;
@@ -385,7 +385,7 @@ begin
   end;
   {$IFDEF PAS2JS}
   asm
-    // Wir suchen zunächst ob es an dem DIV bereits einen Tabulator gibt.
+    // Wir suchen zunÃ¤chst ob es an dem DIV bereits einen Tabulator gibt.
     // Wenn nicht, dann erzeugen wir die Instanz erstmalig
     // Ansonst ersetzen wir nur die Daten.
     var table = Tabulator.findTable(this.GetHtmlName())[0];
@@ -496,7 +496,7 @@ begin
         formatterParams.inputFormat := FormatSettings.LuxDateFormat;
         formatterParams.outputFormat := FormatSettings.LuxDateFormat;
 
-        formatterParams.invalidPlaceholder := '(Ungültiges Datum)'; // Todo: localize
+        formatterParams.invalidPlaceholder := '(UngÃ¼ltiges Datum)'; // Todo: localize
         formatterParams.timezone := FConfig.FTimezone;
       end;
     TColumnType.Time:
@@ -511,7 +511,7 @@ begin
         formatterParams.inputFormat := FormatSettings.LuxTimeFormat;
         formatterParams.outputFormat := FormatSettings.LuxTimeFormat;
 
-        formatterParams.invalidPlaceholder := '(Ungültige Uhrzeit)'; // Todo: localize
+        formatterParams.invalidPlaceholder := '(UngÃ¼ltige Uhrzeit)'; // Todo: localize
         formatterParams.timezone := FConfig.FTimezone;
       end;
     TColumnType.DateTime:
@@ -525,7 +525,7 @@ begin
         formatterParams.inputFormat := FormatSettings.LuxDateTimeFormat;
         formatterParams.outputFormat := FormatSettings.LuxDateTimeFormat;
 
-        formatterParams.invalidPlaceholder := '(Ungültiges Datum)'; // Todo: localize
+        formatterParams.invalidPlaceholder := '(UngÃ¼ltiges Datum)'; // Todo: localize
         formatterParams.timezone := FConfig.FTimezone;
       end;
 
@@ -550,7 +550,7 @@ begin
         formatterParams.decimal := FormatSettings.decimalSeparator;
         formatterParams.thousand := FormatSettings.thousandSeparator;
         formatterParams.symbol := FormatSettings.CurrencyString;
-        // CurrencyFormat = 3 means: 0.00 € ("Symbol after") 'p' is in Tabulator docs for "true"
+        // CurrencyFormat = 3 means: 0.00 â‚¬ ("Symbol after") 'p' is in Tabulator docs for "true"
         // https://tabulator.info/docs/5.5/format#formatter-money
         formatterParams.symbolAfter := IfThen(FormatSettings.CurrencyFormat = 3, 'p', '');
         formatterParams.negativeSign := true; // Todo: check FormatSettings
@@ -596,7 +596,7 @@ end;
 
 constructor TFormatterParams.Create;
 begin
-  invalidPlaceholder := 'Ungültige Daten'; // Todo: localize
+  invalidPlaceholder := 'UngÃ¼ltige Daten'; // Todo: localize
 end;
 
 { TFormatSettingsHelper }
