@@ -1,4 +1,4 @@
-unit DX.Classes.Service;
+﻿unit DX.Classes.Service;
 
 interface
 
@@ -61,8 +61,9 @@ implementation
 
 
 uses
-  System.Win.Registry, Winapi.Windows,
-  DX.Utils.Logger, DX.Utils.Windows, System.UITypes;
+  System.Win.Registry, System.UITypes,
+  Winapi.Windows,
+  DX.Utils.Logger.Intf, DX.Utils.Windows;
 
 procedure ServiceController(CtrlCode: DWord); stdcall;
 begin
@@ -146,7 +147,7 @@ end;
 
 class procedure TServiceBase.LogService(const AMessage: string);
 begin
-  Log('[SERVICE] %s %s', [FDisplayName, AMessage]);
+ DXLog('[SERVICE] %s %s', [FDisplayName, AMessage]);
 end;
 
 class procedure TServiceBase.RegisterService(const AServiceName: string = '');
