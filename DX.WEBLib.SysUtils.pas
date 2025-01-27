@@ -26,6 +26,7 @@ type
   end;
 
   TVersion = record
+    Name: string;
     Major: integer;
     Minor: integer;
     Build: integer;
@@ -36,6 +37,7 @@ type
   /// ProjectNameVersion="$(ProjectName)";  //Captures project name AND version
   /// </summary>
   TAppInfo = record
+    class function AppName: string; static;
     class function BuildTimeStamp: TDateTime; static;
     class function Version: TVersion; static;
     class function VersionShort: string; static;
@@ -99,6 +101,11 @@ end;
 
 { TAppInfo }
 
+class function TAppInfo.AppName: string;
+begin
+  result := Version.Name;
+end;
+
 class function TAppInfo.BaseURL: string;
 var
   LOrigin: string;
@@ -118,7 +125,7 @@ begin
   // First part of the URL
   result := LOrigin;
 
-  // Add the path without a possibel, trailing filename  (such as index.html)
+  // Add the path without a possible, trailing filename  (such as index.html)
   if not LPath.EndsWith('/') then
   begin
     // split LPath to find and remove the trailing filename
@@ -163,7 +170,7 @@ end;
 
 class function TAppInfo.VersionFull: string;
 begin
-  result := Format('Version: %s Build: %s', [VersionLong, FormatDateTime('yyyymmddhhnnss', BuildTimeStamp)]);
+  result := Format('%s Version: %s Build: %s', [AppName, VersionLong, FormatDateTime('yyyymmddhhnnss', BuildTimeStamp)]);
 end;
 
 class function TAppInfo.VersionLong: string;
@@ -210,6 +217,7 @@ end;
 
 class function TAppInfo.Version: TVersion;
 var
+  LAppName: string;
   LAppVersion: string;
   LVersionPos: integer;
   LVersionParts: TArray<string>;
@@ -226,18 +234,21 @@ begin
     }
   end;
 {$ENDIF}
-  // AppName_2_0_47
+  // LAppVersion = 'AppName_2_0_47'
   LVersionPos := Pos('_', LAppVersion);
   if LVersionPos = 0 then
   begin
-    LAppVersion := 'WebApp_0_0_0'; // unexpected value in LAppVersion
-  end
-  else
-  begin
-    LAppVersion := Copy(LAppVersion, LVersionPos + 1, Length(LAppVersion) - LVersionPos);
-    LAppVersion := LAppVersion.Replace('_', '.');
+    LAppVersion := 'UnknownApp_0_0_0'; // unexpected value in LAppVersion
   end;
-  result := Default (TVersion); // 0.0.0
+
+  result := Default(TVersion); // 0.0.0
+
+  //App Name
+  result.Name := Copy(LAppVersion, 1, LVersionPos);
+
+  //App Version
+  LAppVersion := Copy(LAppVersion, LVersionPos + 1, Length(LAppVersion) - LVersionPos);
+  LAppVersion := LAppVersion.Replace('_', '.');
 
   LVersionParts := LAppVersion.Split(['.']);
   if Length(LVersionParts) > 0 then
@@ -274,7 +285,7 @@ end;
 
 class procedure TPWAHelper.InitializeInstaller;
 begin
-{$IFDEF pas2js}
+{$IFDEF PAS2JS}
   asm
     window.addEventListener('beforeinstallprompt', (e) => {
     // Verhindern, dass das Mini-Infobar erscheint.
@@ -311,15 +322,29 @@ begin
      }
   end;
 {$ENDIF }
-  if not LPwaPromptAvailable then begin DXLog(
-  'App ist bereits installiert oder PWA Installation nicht verfügbar');
-  end else begin if LSuccess then begin DXLog('Benutzer hat die Installation akzeptiert');
-  end else begin DXLog('Benutzer hat die Installation abgelehnt'); end; end; end;
+  if not LPwaPromptAvailable then
+  begin
+    DXLog(
+      'App ist bereits installiert oder PWA Installation nicht verfügbar');
+  end
+  else
+  begin
+    if LSuccess then
+    begin
+      DXLog('Benutzer hat die Installation akzeptiert');
+    end
+    else
+    begin
+      DXLog('Benutzer hat die Installation abgelehnt');
+    end;
+  end;
+end;
 
-  class
-  procedure TPWAHelper.Update; begin
+class
+  procedure TPWAHelper.Update;
+  begin
 {$IFDEF PAS2JS}
-  asm
+    asm
     // Taken from here:
     // https://forum.quasar-framework.org/topic/2560/solved-pwa-force-refresh-when-new-version-released/38
     if ('serviceWorker' in navigator) {
@@ -330,8 +355,10 @@ begin
     })
     }
     window.location.reload(true);
-  end;
+    end;
 {$ENDIF}
   end;
 
-  initialization TPWAHelper.InitializeInstaller; end.
+initialization TPWAHelper.InitializeInstaller;
+end.
+
