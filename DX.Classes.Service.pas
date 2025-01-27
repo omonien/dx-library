@@ -1,4 +1,4 @@
-unit DX.Classes.Service;
+ï»¿unit DX.Classes.Service;
 
 interface
 
@@ -61,8 +61,9 @@ implementation
 
 
 uses
-  System.Win.Registry, Winapi.Windows,
-  DX.Utils.Logger, DX.Utils.Windows, System.UITypes;
+  System.Win.Registry, System.UITypes,
+  Winapi.Windows,
+  DX.Utils.Logger.Intf, DX.Utils.Windows;
 
 procedure ServiceController(CtrlCode: DWord); stdcall;
 begin
@@ -146,21 +147,21 @@ end;
 
 class procedure TServiceBase.LogService(const AMessage: string);
 begin
-  Log('[SERVICE] %s %s', [FDisplayName, AMessage]);
+ DXLog('[SERVICE] %s %s', [FDisplayName, AMessage]);
 end;
 
 class procedure TServiceBase.RegisterService(const AServiceName: string = '');
 begin
   // Hier wird:
   // -der Parameter "-service" gesetzt, um den Prozess als Service zu starten
-  // -die Beschreibung gesetzt, was über VCL.SvcMgr nicht möglich ist
+  // -die Beschreibung gesetzt, was ï¿½ber VCL.SvcMgr nicht mï¿½glich ist
   var
   LServiceName := AServiceName;
   if LServiceName = '' then
     LServiceName := FName;
   Assert(LServiceName > '', 'ServiceName has not been configured / is empty!');
   try
-    RegisterDescription(FDescription, AServiceName);
+    RegisterDescription(FDescription, LServiceName);
   except
     raise Exception.Create('Service could not be registered. Run as Administrator!');
   end;
