@@ -267,10 +267,10 @@ begin
     FLogDB.FieldByName('LogMessage').AsString := ALog.LogMessage;
     FLogDB.Post;
   except
-    on e: Exception do
+    on E: Exception do
     begin
       // If we cannot write to the db, then there is nothing we can do
-      console.Error('Error writing to the LogDB ' + e.Message);
+      console.Error('Error writing to the LogDB ' + E.Message);
 
       if Assigned(FLogDB) and (FLogDB.State in dsEditModes) then
       begin
@@ -315,19 +315,19 @@ end;
 
 procedure TWebIndexedDbClientDatasetHelper.OpenDB;
 begin
-  if not(self.Active) then
+  if not (self.Active) then
   begin
     console.Debug('db not open yet');
     await(DBisInitialized);
 
     Open;
 
-    while not(self.Active) do
+    while not (self.Active) do
     begin
       await(Sleep(10));
     end;
 
-    if not(self.Active) then
+    if not (self.Active) then
     begin
       console.Error(FormatDateTime('hh:nn:ss,zzz', now) + 'FAILURE - LogDB refused to open properly!');
     end
@@ -346,16 +346,23 @@ end;
 class procedure TAppErrorHandler.AppError(Sender: TObject; AError: TApplicationError; var Handled: Boolean);
 var
   LError: string;
+  LStack: string;
 begin
+  if Assigned(AError.AError) then
+  begin
+    LError := AError.AError.ValueOfProperty('FMessage');
+    LStack := AError.AError.ValueOfProperty('FStack')
+  end
+  else
+  begin
+    LError := 'Unknown error';
+    LStack := 'No stack available';
+  end;
+  // DXLog(LError, TLogLevel.Error);
+  DXLog(LStack, TLogLevel.Error);
+
   if not Handled then
   begin
-    if Assigned(AError.AError) then
-      LError := AError.AError.ValueOfProperty('FMessage')
-    else
-    begin
-      LError := AError.AMessage;
-      DXLog(LError, TLogLevel.Error);
-    end;
 {$IFDEF DEBUG}
     // let unhandled exceptions pop up only in DEBUG mode!
 {$IFDEF PAS2JS}
@@ -371,7 +378,6 @@ end;
 
 {$IFNDEF PAS2JS}
 
-
 procedure TJSConsoleHelper.Debug(Obj1: JSValue);
 begin
   // nothing: just a helper for LSP. Missing in Web.TJSConsole
@@ -380,6 +386,6 @@ end;
 
 initialization
 
-Application.OnError := TAppErrorHandler.AppError;
-
+  Application.OnError := TAppErrorHandler.AppError; //Everything (incl. Javascript, and Pascal related Exceptions)
 end.
+
