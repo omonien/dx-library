@@ -4,13 +4,13 @@ interface
 
 uses
   System.Classes, System.SysUtils, System.IniFiles, System.Rtti, System.Generics.Collections,
-  DX.Classes.Singleton, DX.Classes.Strings, DX.Classes.Attributes, DX.Classes.Configuration.Intf;
+  DX.Classes.Singleton, DX.Classes.Strings, DX.Classes.Attributes, DX.Classes.Configuration.Intf, DX.Utils.Logger;
 
-Type
+type
 
   TIniFileHelper = class helper for TIniFile
   public
-    procedure WriteDefault(const Section, Ident: string; Value: String); overload;
+    procedure WriteDefault(const Section, Ident: string; Value: string); overload;
     procedure WriteDefault(const Section, Ident: string; Value: Integer); overload;
     procedure WriteDefault(const Section, Ident: string; Value: Boolean); overload;
   end;
@@ -120,7 +120,8 @@ Type
     constructor Create;
     destructor Destroy; override;
     procedure WriteStorage; deprecated 'Use method Save()';
-    procedure Save;
+    procedure Load; virtual;
+    procedure Save; virtual;
     property EncryptionKey: string write FEncryptionKey;
     property Filename: string read FStorageFile;
     property Encoding: TEncoding read GetEncoding write SetEncoding;
@@ -191,18 +192,8 @@ begin
   Assert(TDirectory.Exists(LConfigDirectory));
 
   FStorageFile := TPath.Combine(LConfigDirectory, TPath.GetFileName(FStorageFile));
-
-  if TFile.Exists(FStorageFile) then
-  begin
-    LContent := TFile.ReadAllBytes(Filename);
-    TEncoding.GetBufferEncoding(LContent, LEncoding);
-  end
-  else
-  begin
-    LEncoding := TEncoding.UTF8;
-  end;
-
-  FStorage := TMemIniFile.Create(FStorageFile, LEncoding);
+  DXLog('Configuration location' + Filename);
+  Load;
   FDescription.Clear;
   CreateDefaultConfig;
 end;
@@ -277,7 +268,7 @@ begin
   end;
   if FStorage.Modified then
   begin
-    WriteStorage;
+    Save;
   end;
 end;
 
@@ -416,6 +407,25 @@ begin
   result := FStorage.Encoding;
 end;
 
+procedure TConfigurationManager<T>.Load;
+var
+  LEncoding: TEncoding;
+begin
+  LEncoding := nil;
+  if TFile.Exists(FStorageFile) then
+  begin
+    var LContent := TFile.ReadAllBytes(Filename);
+    TEncoding.GetBufferEncoding(LContent, LEncoding);
+  end
+  else
+  begin
+    LEncoding := TEncoding.UTF8;
+  end;
+
+  FStorage.Free;
+  FStorage := TMemIniFile.Create(FStorageFile, LEncoding);
+end;
+
 procedure TConfigurationManager<T>.WriteStorage;
 begin
   Save;
@@ -472,7 +482,7 @@ var
 begin
   LList := LockList;
   try
-    result := Default (TConfigEntry);
+    result := Default(TConfigEntry);
     for LItem in LList do
     begin
       if SameText(LItem.Name, APropertyName) then
@@ -524,12 +534,12 @@ end;
 
 constructor ConfigFileAttribute.Create(const AFilename: string);
 begin
-  Inherited Create(AFilename);
+  inherited Create(AFilename);
 end;
 
 { TIniFileHelper }
 
-procedure TIniFileHelper.WriteDefault(const Section, Ident: string; Value: String);
+procedure TIniFileHelper.WriteDefault(const Section, Ident: string; Value: string);
 begin
   if not ValueExists(Section, Ident) then
   begin
@@ -540,7 +550,7 @@ end;
 procedure TIniFileHelper.WriteDefault(const Section, Ident: string; Value: Boolean);
 const
   // Same implementation as in TIniFile!
-  Values: array [Boolean] of string = ('0', '1');
+  Values: array[Boolean] of string = ('0', '1');
 begin
   WriteDefault(Section, Ident, Values[Ord(Value) <> 0]);
 end;
@@ -554,7 +564,8 @@ end;
 
 constructor ConfigDirectoryAttribute.Create(const ADirectory: string);
 begin
-  Inherited Create(ADirectory);
+  inherited Create(ADirectory);
 end;
 
 end.
+
