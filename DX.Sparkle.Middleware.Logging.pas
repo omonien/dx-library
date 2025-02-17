@@ -6,7 +6,7 @@ uses
   System.Classes, System.SysUtils, System.Rtti,
   Bcl.Logging,
   Sparkle.Middleware.Logging, Sparkle.HttpServer.Context, Sparkle.HttpServer.Module,
-  DX.Utils.Logger;
+  DX.Utils.Logger.Intf;
 
 type
 

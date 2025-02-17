@@ -195,7 +195,7 @@ uses
   System.Rtti, System.NetEncoding,
   Xml.xmldom, Xml.XMLIntf, Xml.XMLDoc, Xml.adomxmldom, Xml.Win.msxmldom, Xml.omnixmldom,
   Sparkle.URI, Sparkle.Middleware.Compress,
-  DX.Sparkle.Utils, DX.Utils.Logger;
+  DX.Sparkle.Utils, DX.Utils.Logger.Intf;
 
 resourcestring
   RSHSWBInvalidVarIndex = 'Invalid Variable Index: %d';

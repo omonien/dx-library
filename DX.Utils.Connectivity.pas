@@ -51,7 +51,7 @@ type
 implementation
 
 uses
-  System.Threading, IdHTTP, IdTCPClient, DX.Utils.Logger;
+  System.Threading, IdHTTP, IdTCPClient, DX.Utils.Logger.Intf;
 
 { TDXConnectivity }
 

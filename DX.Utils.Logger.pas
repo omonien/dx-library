@@ -16,7 +16,8 @@ unit DX.Utils.Logger;
 interface
 
 uses
-  System.Classes, System.SysUtils;
+  System.Classes, System.SysUtils,
+  DX.Utils.Logger.Intf;
 
 type
   TShowExceptionProc = procedure(E: Exception) of Object;
@@ -25,7 +26,7 @@ type
   /// TDXLogger provides a thread-safe logging mechanism.
   /// </summary>
 
-  TDXLogger = class(TObject)
+  TDXLogger = class(TInterfacedObject, ILogger)
   private
     class var FInstance: TDXLogger;
     class var FTerminating: Boolean;
@@ -48,6 +49,12 @@ type
     class procedure SetWaitForLogBuffer(const AValue: Boolean); static; inline;
   protected
     constructor Create;
+
+    { IInterface }
+    function QueryInterface(const IID: TGUID; out Obj): HResult; virtual; stdcall;
+    function _AddRef: Integer; stdcall;
+    function _Release: Integer; stdcall;
+
     class function GetDateFormat: string; static;
     class procedure SetExternalStrings(AStrings: TStrings); static;
     class procedure SetExternalStringsAppendOnTop(const Value: Boolean); static;
@@ -95,10 +102,11 @@ type
     /// </summary>
     class property WaitForLogBuffer: Boolean read GetWaitForLogBuffer write SetWaitForLogBuffer;
 
-    class procedure Log(const AMessage: string); overload;
-    class procedure Log(
+    procedure Log(const AMessage: string; const ADebugLevel: TLogLevel = TLogLevel.Info); overload;
+    procedure Log(
       const AFormatString: string;
-      const AValues: array of const); overload;
+      const AValues: array of const;
+      const ADebugLevel: TLogLevel = TLogLevel.Info); overload;
 
     class function Instance: TDXLogger; static;
 
@@ -168,14 +176,14 @@ type
 
 procedure Log(const AMessage: string);
 begin
-  TDXLogger.Log(AMessage);
+  TDXLogger.Instance.Log(AMessage);
 end;
 
 procedure Log(
   const AFormatString: string;
   const AValues: array of const);
 begin
-  TDXLogger.Log(AFormatString, AValues);
+  TDXLogger.Instance.Log(AFormatString, AValues);
 end;
 
 procedure DXLog(const AMessage: string); overload;
@@ -188,6 +196,25 @@ procedure DXLog(
   const AValues: array of const); overload;
 begin
   Log(AFormatString, AValues);
+end;
+
+
+{ TDXLogger.IInterface }
+//TDXLogger implements a singlton pattern - no reference tracking that is
+function TDXLogger.QueryInterface(const IID: TGUID; out Obj): HResult;
+begin
+    if GetInterface(IID, Obj) then Result := S_OK
+    else Result := E_NOINTERFACE
+end;
+
+function TDXLogger._AddRef: Integer;
+begin
+    Result := -1   // -1 indicates no reference counting is taking place
+end;
+
+function TDXLogger._Release: Integer;
+begin
+    Result := -1   // -1 indicates no reference counting is taking place
 end;
 
 { TDXLogger }
@@ -211,6 +238,7 @@ end;
 
 class destructor TDXLogger.Destroy;
 begin
+  UnRegisterLogger;
   //Wait until all logs are written
   Sleep(300);
   while WaitForLogBuffer and not LogBufferEmpty do
@@ -252,9 +280,10 @@ begin
   result := FInstance;
 end;
 
-class procedure TDXLogger.Log(
+procedure TDXLogger.Log(
   const AFormatString: string;
-  const AValues: array of const);
+  const AValues: array of const;
+  const ADebugLevel: TLogLevel = TLogLevel.Info);
 begin
   Log(Format(AFormatString, AValues));
 end;
@@ -300,7 +329,7 @@ begin
   end;
 end;
 
-class procedure TDXLogger.Log(const AMessage: string);
+procedure TDXLogger.Log(const AMessage: string; const ADebugLevel: TLogLevel = TLogLevel.Info);
 var
   LMessage: string;
 begin
@@ -378,6 +407,8 @@ begin
   s := TPath.GetLibraryPath;
   FLogFileName := TPath.Combine(s, TPath.ChangeExtension(TPath.GetFileName(ParamStr(0)), '.log'));
   FInstance := TDXLogger.Create;
+  //Register itself as ILogger
+  RegisterLogger(FInstance);
 end;
 
 class function TDXLogger.GetMaxLogAge: integer;
