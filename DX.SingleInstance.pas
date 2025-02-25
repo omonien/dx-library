@@ -39,7 +39,6 @@ implementation
 
 class procedure TSingleInstance.Check(const AAppId: string);
 begin
-  inherited Create;
   FAppId := AAppId;
   if IsRunning then
     Halt; // Terminate the application if another instance is detected
