@@ -154,12 +154,9 @@ end;
 
 constructor TConfigurationManager<T>.Create;
 var
-  LContent: TBytes;
-  LEncoding: TEncoding;
   LConfigDirectory: string;
 begin
   inherited;
-  LEncoding := nil;
   FEncryptionKey := 'DeveloperExperts2020';
 
   // ConfigFile given?
@@ -206,12 +203,8 @@ var
   LProperty: TRttiProperty;
   LAttributes: TArray<TCustomAttribute>;
   LAttribute: TCustomAttribute;
-  LSection: string;
-  LDefault: string;
   LConfigItem: TConfigEntry;
-  LConfig: StringList;
   LValue: string;
-  LContent: TBytes;
 begin
   LContext := TRttiContext.Create;
   try
@@ -390,7 +383,6 @@ end;
 function TConfigurationManager<T>.GetConfigValueForPropertyAsParams(const AProperty: string): StringList;
 var
   LStrings: TStrings;
-  S: string;
 begin
   LStrings := TStringList.Create;
   try
