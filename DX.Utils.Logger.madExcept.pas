@@ -29,6 +29,12 @@ begin
   exceptIntf.AutoSend := false;
   exceptIntf.AutoClipboard := false;
   exceptIntf.ShowPleaseWaitBox := false;
+  exceptIntf.CreateScreenShot := false;
+  exceptIntf.ShowDisAsm := false;
+  exceptIntf.ShowCpuRegisters := false;
+  exceptIntf.ShowStackDump := false;
+  exceptIntf.HideUglyItems := true;
+
 
   DXLog('Exception (%s)'#13#10'%s', [LHandled, exceptIntf.BugReport], LLogLevel);
 end;
