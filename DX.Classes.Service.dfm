@@ -1,4 +1,5 @@
 object ServiceBase: TServiceBase
+  OldCreateOrder = True
   OnCreate = ServiceCreate
   AllowPause = False
   DisplayName = 'Service Base'
@@ -7,5 +8,4 @@ object ServiceBase: TServiceBase
   OnStop = ServiceStop
   Height = 314
   Width = 464
-  PixelsPerInch = 96
 end
