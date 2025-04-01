@@ -12,8 +12,8 @@ type
   protected
     class procedure ExceptionHandler(const exceptIntf: IMEException; var handled: boolean);
   public
-    class Constructor Create;
-    class Procedure Register;
+    class constructor Create;
+    class procedure Register;
   end;
 
 implementation
@@ -35,8 +35,12 @@ begin
   exceptIntf.ShowStackDump := false;
   exceptIntf.HideUglyItems := true;
 
-
-  DXLog('Exception (%s)'#13#10'%s', [LHandled, exceptIntf.BugReport], LLogLevel);
+  //Log all exceptions in DEBUG mode
+{$IFNDEF DEBUG}
+  //Unhandled exceptions only in RELEASE mode
+  if not handled then
+{$END}
+    DXLog('Exception (%s)'#13#10'%s', [LHandled, exceptIntf.BugReport], LLogLevel);
 end;
 
 class procedure TDXExceptionLogger.Register;
@@ -62,6 +66,7 @@ end;
 
 initialization
 
-TDXExceptionLogger.Register;
+  TDXExceptionLogger.Register;
 
 end.
+
