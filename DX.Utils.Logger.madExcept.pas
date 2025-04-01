@@ -39,7 +39,7 @@ begin
 {$IFNDEF DEBUG}
   //Unhandled exceptions only in RELEASE mode
   if not handled then
-{$END}
+{$ENDIF}
     DXLog('Exception (%s)'#13#10'%s', [LHandled, exceptIntf.BugReport], LLogLevel);
 end;
 
