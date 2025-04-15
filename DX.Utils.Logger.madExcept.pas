@@ -35,12 +35,15 @@ begin
   exceptIntf.ShowStackDump := false;
   exceptIntf.HideUglyItems := true;
 
-  //Log all exceptions in DEBUG mode
-{$IFNDEF DEBUG}
-  //Unhandled exceptions only in RELEASE mode
+  //Todo: log stack-trace into separate file
   if not handled then
-{$ENDIF}
+  begin
     DXLog('Exception (%s)'#13#10'%s', [LHandled, exceptIntf.BugReport], LLogLevel);
+  end
+  else
+  begin
+    DXLog('Exception (%s) %s', [LHandled, exceptIntf.ExceptMessage], LLogLevel);
+  end;
 end;
 
 class procedure TDXExceptionLogger.Register;
