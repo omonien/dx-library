@@ -151,7 +151,8 @@ uses
   AndroidAPI.Log,
 {$ENDIF}
   System.IOUtils,
-  System.DateUtils;
+  System.DateUtils,
+  DX.SysUtils;
 
 type
   TLogThread = class(TThread)
@@ -197,6 +198,8 @@ procedure DXLog(
 begin
   Log(AFormatString, AValues);
 end;
+
+
 
 
 { TDXLogger.IInterface }
@@ -332,8 +335,10 @@ end;
 procedure TDXLogger.Log(const AMessage: string; const ADebugLevel: TLogLevel = TLogLevel.Info);
 var
   LMessage: string;
+  LMemStatus: string;
 begin
-  LMessage := FormatDateTime(DateFormat, now) + ' : ' + AMessage;
+  LMemStatus := GetMemoryStatusString;
+  LMessage := FormatDateTime(DateFormat, now) +  ' [' + LMemStatus + ']' + ' : ' + AMessage;
   if Assigned(Instance.FLogBuffer) then
   begin
     TMonitor.Enter(FInstance);

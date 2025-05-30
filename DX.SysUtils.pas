@@ -10,6 +10,9 @@ interface
 
 uses
   System.Classes, System.SysUtils, System.Rtti
+{$IFDEF MSWINDOWS}
+    , WinAPI.Windows, WinAPI.PsAPI
+{$ENDIF}
 {$IFDEF IOS}
     , Macapi.Helpers, iOSAPi.Helpers, iOSAPi.Foundation, iOSAPi.UIKit
 {$ENDIF};
@@ -75,6 +78,14 @@ function IIF(AExpression: Boolean; ATrueValue: TValue; AFalseValue: TValue): TVa
 /// May be moved to DX.Utils.RTTI
 /// </summary>
 function null: TValue;
+
+/// <summary>
+/// Retrieves the current memory status of the application
+/// </summary>
+/// <returns>
+/// Formatted string with memory information (usage, available memory, process memory)
+/// </returns>
+function GetMemoryStatusString: string;
 
 implementation
 
@@ -174,6 +185,41 @@ end;
 class function THash.SHA1ForFile(const AFileName: string): string;
 begin
   Result := HashForFile(AFileName, TAlgorithm.SHA1);
+end;
+
+function GetMemoryStatusString: string;
+{$IFDEF MSWINDOWS}
+var
+  LMemStatus: TMemoryStatusEx;
+  LProcessMemCounters: TProcessMemoryCounters;
+{$ENDIF}
+begin
+  Result := '';
+{$IFDEF MSWINDOWS}
+  try
+    // Global memory status
+    LMemStatus.dwLength := SizeOf(TMemoryStatusEx);
+    if GlobalMemoryStatusEx(LMemStatus) then
+    begin
+      Result := Format('Mem: %d%% used, Avail: %s MB',
+        [LMemStatus.dwMemoryLoad,
+         FormatFloat('#,##0', LMemStatus.ullAvailPhys div (1024 * 1024))]);
+    end;
+
+    // Process-specific memory usage
+    if GetProcessMemoryInfo(GetCurrentProcess, @LProcessMemCounters, SizeOf(LProcessMemCounters)) then
+    begin
+      if Result <> '' then
+        Result := Result + ', ';
+      Result := Result + Format('Process: %s MB',
+        [FormatFloat('#,##0', LProcessMemCounters.WorkingSetSize div (1024 * 1024))]);
+    end;
+  except
+    Result := 'Mem: N/A';
+  end;
+{$ELSE}
+  Result := 'Mem: N/A (Platform not supported)';
+{$ENDIF}
 end;
 
 end.
