@@ -20,6 +20,8 @@ uses
   DX.Utils.Logger.Intf;
 
 type
+  TLogLevel = DX.Utils.Logger.Intf.TLogLevel;
+
   TShowExceptionProc = procedure(E: Exception) of Object;
 
   /// <summary>
@@ -136,6 +138,17 @@ procedure DXLog(const AMessage: string); overload;
 procedure DXLog(
   const AFormatString: string;
   const AValues: array of const); overload;
+/// <summary>
+/// Shortcut to to avoid name clashes with other logging systems - with LogLevel
+/// </summary>
+procedure DXLog(const AMessage: string; const ALogLevel: TLogLevel); overload;
+/// <summary>
+/// Shortcut to to avoid name clashes with other logging systems - with LogLevel
+/// </summary>
+procedure DXLog(
+  const AFormatString: string;
+  const AValues: array of const;
+  const ALogLevel: TLogLevel); overload;
 
 implementation
 
@@ -197,6 +210,19 @@ procedure DXLog(
   const AValues: array of const); overload;
 begin
   Log(AFormatString, AValues);
+end;
+
+procedure DXLog(const AMessage: string; const ALogLevel: TLogLevel); overload;
+begin
+  TDXLogger.Instance.Log(AMessage, ALogLevel);
+end;
+
+procedure DXLog(
+  const AFormatString: string;
+  const AValues: array of const;
+  const ALogLevel: TLogLevel); overload;
+begin
+  TDXLogger.Instance.Log(AFormatString, AValues, ALogLevel);
 end;
 
 
@@ -288,7 +314,7 @@ procedure TDXLogger.Log(
   const AValues: array of const;
   const ADebugLevel: TLogLevel = TLogLevel.Info);
 begin
-  Log(Format(AFormatString, AValues));
+  Log(Format(AFormatString, AValues), ADebugLevel);
 end;
 
 class function TDXLogger.LogBufferEmpty: Boolean;
@@ -336,9 +362,14 @@ procedure TDXLogger.Log(const AMessage: string; const ADebugLevel: TLogLevel = T
 var
   LMessage: string;
   LMemStatus: string;
+  LLogLevelStr: string;
 begin
+  // Exit early for None level
+  if ADebugLevel = TLogLevel.None then
+    Exit;
+
   LMemStatus := GetMemoryStatusString;
-  LMessage := FormatDateTime(DateFormat, now) +  ' [' + LMemStatus + ']' + ' : ' + AMessage;
+  LMessage := FormatDateTime(DateFormat, now) + ' [' + LMemStatus + '] : ' + AMessage;
   if Assigned(Instance.FLogBuffer) then
   begin
     TMonitor.Enter(FInstance);
