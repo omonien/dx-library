@@ -425,35 +425,80 @@ end;
 
 procedure TConfigurationManager<T>.WriteDescription;
 var
-  LContent: StringList;
-  LConfigItem: TConfigEntry;
+  LLines: TArray<string>;
+  LResult: StringList;
   LConfigItems: TList<TConfigEntry>;
+  LConfigItem: TConfigEntry;
+  LDescMap: TDictionary<string, StringList>;
+  LCurrentSection: string;
+  LLine, LTrimmed, LKeyName: string;
+  LEqPos: Integer;
+  LDescLines: StringList;
 begin
-  LContent.Clear;
-  // Main description
-  AddComments(LContent, FDescription);
-
-  // Followed by description of all items
-  LConfigItems := TConfigRegistry.Default.LockList;
+  // Beschreibungs-Map aufbauen: "section/key" (lowercase) -> Description
+  LDescMap := TDictionary<string, StringList>.Create;
   try
-    for LConfigItem in LConfigItems do
-    begin
-      if not LConfigItem.Description.IsEmpty then
+    LConfigItems := TConfigRegistry.Default.LockList;
+    try
+      for LConfigItem in LConfigItems do
       begin
-        LContent.Add('#');
-        LContent.Add(Format('# %s / %s', [LConfigItem.Section, LConfigItem.Name]));
-        AddComments(LContent, LConfigItem.Description);
+        if not LConfigItem.Description.IsEmpty then
+          LDescMap.AddOrSetValue(
+            LConfigItem.Section.ToLower + '/' + LConfigItem.Name.ToLower,
+            LConfigItem.Description);
       end;
+    finally
+      TConfigRegistry.Default.UnlockList;
     end;
-  finally
-    TConfigRegistry.Default.UnlockList;
-  end;
-  // If the description is updated, then the file is ultimately updated to UTF8 Encoding
-  if not LContent.IsEmpty then
-  begin
-    LContent.AddStrings(TFile.ReadAllLines(FStorageFile, Encoding));
-    TFile.WriteAllLines(FStorageFile, LContent, TEncoding.UTF8);
+
+    // INI-Datei lesen
+    LLines := TFile.ReadAllLines(FStorageFile, Encoding);
+    LResult.Clear;
+
+    // Haupt-Beschreibung oben einfuegen
+    AddComments(LResult, FDescription);
+    if not FDescription.IsEmpty then
+      LResult.Add('');
+
+    LCurrentSection := '';
+    for LLine in LLines do
+    begin
+      LTrimmed := LLine.Trim;
+
+      // Bestehende Kommentarzeilen ueberspringen (werden neu generiert)
+      if LTrimmed.StartsWith('#') then
+        Continue;
+
+      // Leerzeilen ueberspringen (werden neu generiert)
+      if LTrimmed = '' then
+        Continue;
+
+      // Section-Header
+      if LTrimmed.StartsWith('[') and LTrimmed.EndsWith(']') then
+      begin
+        if not LResult.IsEmpty then
+          LResult.Add('');
+        LCurrentSection := Copy(LTrimmed, 2, Length(LTrimmed) - 2);
+        LResult.Add(LLine);
+        Continue;
+      end;
+
+      // Key=Value Zeile: Beschreibung davor einfuegen
+      LEqPos := Pos('=', LTrimmed);
+      if (LEqPos > 0) and (LCurrentSection <> '') then
+      begin
+        LKeyName := Copy(LTrimmed, 1, LEqPos - 1).Trim;
+        if LDescMap.TryGetValue(LCurrentSection.ToLower + '/' + LKeyName.ToLower, LDescLines) then
+          AddComments(LResult, LDescLines);
+      end;
+      LResult.Add(LLine);
+    end;
+
+    // Zurueckschreiben (immer UTF8)
+    TFile.WriteAllLines(FStorageFile, LResult, TEncoding.UTF8);
     Encoding := TEncoding.UTF8;
+  finally
+    FreeAndNil(LDescMap);
   end;
 end;
 
