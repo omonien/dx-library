@@ -1,4 +1,4 @@
-unit DX.Lib.Configuration.VCL;
+﻿unit DX.Lib.Configuration.VCL;
 
 interface
 
@@ -147,7 +147,7 @@ begin
   Result.KeyOptions := [keyUnique];
 
   // Titel-Zeile ausblenden (nur DisplayOptions, FixedRows bleibt bei 1 aber unsichtbar)
-  Result.DisplayOptions := [];
+  Result.DisplayOptions := [doKeyColFixed, doAutoColResize];
 
   Result.OnSelectCell := EditorSelectCell;
   Result.OnEditButtonClick := EditorEditButtonClick;
@@ -318,7 +318,7 @@ begin
 
     // ConfigVersion in StatusBar anzeigen
     if FConfigVersionValue <> '' then
-      StatusBar.Panels[1].Text := 'ConfigVersion: ' + FConfigVersionValue
+      StatusBar.Panels[1].Text := 'ConfigVersion: ' + FConfigVersionValue  + '     '   //etwas Abstand nach rechts
     else
       StatusBar.Panels[1].Text := '';
 

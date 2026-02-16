@@ -10,7 +10,9 @@ object ConfigurationUI: TConfigurationUI
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
+  OldCreateOrder = True
   Position = poScreenCenter
+  PixelsPerInch = 96
   TextHeight = 15
   object ScrollBox: TScrollBox
     Left = 0
