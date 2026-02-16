@@ -69,7 +69,8 @@ type
   strict private
     FEncryptionKey: string;
   private
-    FStorage: TMemIniFile;
+    class var FConcreteClass: TClass;
+    var FStorage: TMemIniFile;
     FStorageFile: string;
     FDescription: StringList;
     procedure AddComments(
@@ -122,6 +123,9 @@ type
     procedure WriteStorage; deprecated 'Use method Save()';
     procedure Load; virtual;
     procedure Save; virtual;
+    class procedure RegisterConcreteClass(AClass: TClass);
+    class function Default: T;
+    class function Instance: T;
     property EncryptionKey: string write FEncryptionKey;
     property Filename: string read FStorageFile;
     property Encoding: TEncoding read GetEncoding write SetEncoding;
@@ -132,6 +136,28 @@ implementation
 
 uses
   System.IOUtils, Data.DBXEncryption, System.NetEncoding, DX.Utils.Rtti;
+
+class procedure TConfigurationManager<T>.RegisterConcreteClass(AClass: TClass);
+begin
+  FConcreteClass := AClass;
+end;
+
+class function TConfigurationManager<T>.Default: T;
+begin
+  if not Assigned(FDefaultInstance) then
+  begin
+    if Assigned(FConcreteClass) then
+      FDefaultInstance := T(TClassConstructor.ConstructClass(FConcreteClass))
+    else
+      FDefaultInstance := TClassConstructor.Construct<T>;
+  end;
+  Result := FDefaultInstance;
+end;
+
+class function TConfigurationManager<T>.Instance: T;
+begin
+  Result := Default;
+end;
 
 constructor ConfigValueAttribute.Create(const ASection, ADefault: string);
 begin
@@ -199,16 +225,23 @@ procedure TConfigurationManager<T>.CreateDefaultConfig;
 var
   LContext: TRttiContext;
   LConfigType: TRttiType;
-  LConfigProperties: TArray<TRttiProperty>;
   LProperty: TRttiProperty;
   LAttributes: TArray<TCustomAttribute>;
   LAttribute: TCustomAttribute;
   LConfigItem: TConfigEntry;
   LValue: string;
+  LConfigItems: TDictionary<string, TConfigEntry>;
+  LKey: string;
+  LPair: TPair<string, TConfigEntry>;
+  LHierarchy: TList<TRttiType>;
+  LCurrentType: TRttiType;
+  i: Integer;
 begin
   LContext := TRttiContext.Create;
+  LConfigItems := TDictionary<string, TConfigEntry>.Create;
+  LHierarchy := TList<TRttiType>.Create;
   try
-    LConfigType := LContext.GetType(T);
+    LConfigType := LContext.GetType(Self.ClassType);
 
     LAttributes := LConfigType.GetAttributes;
     for LAttribute in LAttributes do
@@ -221,42 +254,64 @@ begin
 
     end;
 
-    TConfigRegistry.Default.Clear;
-    LConfigProperties := LConfigType.GetProperties;
-    for LProperty in LConfigProperties do
+    // Build class hierarchy from base to most-derived
+    LCurrentType := LConfigType;
+    while LCurrentType <> nil do
     begin
-      LAttributes := LProperty.GetAttributes;
-      LConfigItem.Name := '';
-      LConfigItem.IsEncrypted := false;
-      for LAttribute in LAttributes do
+      LHierarchy.Insert(0, LCurrentType);
+      LCurrentType := LCurrentType.BaseType;
+    end;
+
+    // Walk hierarchy from base to derived, using GetDeclaredProperties at each level.
+    // AddOrSetValue ensures that derived-class defaults override base-class defaults.
+    for i := 0 to LHierarchy.Count - 1 do
+    begin
+      for LProperty in LHierarchy[i].GetDeclaredProperties do
       begin
-        if LAttribute is ConfigValueAttribute then
+        LAttributes := LProperty.GetAttributes;
+        LConfigItem.Name := '';
+        LConfigItem.IsEncrypted := false;
+        for LAttribute in LAttributes do
         begin
-          LConfigItem.Name := LProperty.Name;
-          LConfigItem.Section := (LAttribute as ConfigValueAttribute).FSection;
-          LConfigItem.Default := (LAttribute as ConfigValueAttribute).FDefault;
-          LConfigItem.AssignDescription(LProperty);
-        end;
-        if LAttribute is ConfigValueEncryptedAttribute then
-        begin
-          LConfigItem.IsEncrypted := true;
-        end;
-      end;
-      if LConfigItem.Name > '' then
-      begin
-        if not FStorage.ValueExists(LConfigItem.Section, LConfigItem.Name) then
-        begin
-          LValue := LConfigItem.Default;
-          if LConfigItem.IsEncrypted then
+          if LAttribute is ConfigValueAttribute then
           begin
-            LValue := Encrypt(LValue);
+            LConfigItem.Name := LProperty.Name;
+            LConfigItem.Section := (LAttribute as ConfigValueAttribute).FSection;
+            LConfigItem.Default := (LAttribute as ConfigValueAttribute).FDefault;
+            LConfigItem.AssignDescription(LProperty);
           end;
-          FStorage.WriteString(LConfigItem.Section, LConfigItem.Name, LValue);
+          if LAttribute is ConfigValueEncryptedAttribute then
+          begin
+            LConfigItem.IsEncrypted := true;
+          end;
         end;
-        TConfigRegistry.Default.Add(LConfigItem);
+        if LConfigItem.Name > '' then
+        begin
+          LKey := LConfigItem.Section + '.' + LConfigItem.Name;
+          LConfigItems.AddOrSetValue(LKey, LConfigItem);
+        end;
       end;
     end;
+
+    // Second pass: write defaults and register entries
+    TConfigRegistry.Default.Clear;
+    for LPair in LConfigItems do
+    begin
+      LConfigItem := LPair.Value;
+      if not FStorage.ValueExists(LConfigItem.Section, LConfigItem.Name) then
+      begin
+        LValue := LConfigItem.Default;
+        if LConfigItem.IsEncrypted then
+        begin
+          LValue := Encrypt(LValue);
+        end;
+        FStorage.WriteString(LConfigItem.Section, LConfigItem.Name, LValue);
+      end;
+      TConfigRegistry.Default.Add(LConfigItem);
+    end;
   finally
+    FreeAndNil(LHierarchy);
+    FreeAndNil(LConfigItems);
     LContext.Free;
   end;
   if FStorage.Modified then
