@@ -1,4 +1,4 @@
-unit DX.Classes.Configuration.VCL;
+unit DX.Lib.Configuration.VCL;
 
 interface
 
@@ -7,7 +7,7 @@ uses
   Winapi.Windows, Winapi.Messages,
   VCL.Graphics, VCL.Controls, VCL.Forms, VCL.Dialogs, VCL.Grids, VCL.ValEdit,
   VCL.ComCtrls, VCL.StdCtrls, VCL.ExtCtrls,
-  DX.Classes.Configuration.Intf;
+  DX.Lib.Configuration.Intf;
 
 type
   TConfigurationUI = class(TForm)
@@ -37,6 +37,8 @@ type
     procedure UpdateDescription(const AKey: string);
     procedure EditorSelectCell(Sender: TObject; ACol, ARow: Integer;
       var CanSelect: Boolean);
+    procedure EditorEditButtonClick(Sender: TObject);
+    procedure EditorMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     function CreateSectionHeader(const ACaption: string;
       ATop: Integer; AInvalid: Boolean = False): TPanel;
     function CreateSectionEditor(ATop: Integer;
@@ -61,8 +63,9 @@ type
 implementation
 
 uses
-  DX.Classes.Configuration, DX.Classes.Strings, DX.CrossPlatform,
-  DX.Utils.Windows, System.IOUtils, Winapi.ShellAPI;
+  DX.Lib.Configuration, DX.Classes.Strings, DX.CrossPlatform,
+  DX.Utils.Windows, System.IOUtils, Winapi.ShellAPI,
+  DX.Lib.Configuration.ConnectionStringEditor.Form;
 
 {$R *.dfm}
 
@@ -142,13 +145,22 @@ begin
   Result.Align := alTop;
   Result.DefaultRowHeight := ROW_HEIGHT;
   Result.KeyOptions := [keyUnique];
-  Result.TitleCaptions.Clear;
-  Result.TitleCaptions.Add('Key');
-  Result.TitleCaptions.Add('Value');
+
+  // Titel-Zeile ausblenden (nur DisplayOptions, FixedRows bleibt bei 1 aber unsichtbar)
+  Result.DisplayOptions := [];
+
   Result.OnSelectCell := EditorSelectCell;
+  Result.OnEditButtonClick := EditorEditButtonClick;
+  Result.OnMouseMove := EditorMouseMove;
   Result.ColWidths[0] := 250;
   Result.ColWidths[1] := ScrollBox.ClientWidth - 250 - 4;
   Result.Options := Result.Options + [goColSizing, goThumbTracking];
+
+  // Scrollbars ausblenden
+  Result.ScrollBars := ssNone;
+
+  // Hints aktivieren
+  Result.ShowHint := True;
 
   if AInvalid then
   begin
@@ -162,7 +174,9 @@ end;
 
 procedure TConfigurationUI.AdjustEditorHeight(AEditor: TValueListEditor);
 begin
-  AEditor.Height := AEditor.RowCount * (ROW_HEIGHT + 1) + 4;
+  // DisplayOptions=[] versteckt die Titel-Zeile, aber RowCount zählt sie noch mit
+  // Strings.Count gibt die Anzahl der Datenzeilen ohne Fixed Row
+  AEditor.Height := AEditor.Strings.Count * (ROW_HEIGHT + 1) + 4;
 end;
 
 procedure TConfigurationUI.EditorSelectCell(Sender: TObject;
@@ -179,6 +193,57 @@ begin
     LSection := LEditor.HelpKeyword;
     LKey := LSection + '/' + LEditor.Keys[ARow];
     UpdateDescription(LKey);
+  end;
+end;
+
+procedure TConfigurationUI.EditorEditButtonClick(Sender: TObject);
+var
+  LEditor: TValueListEditor;
+  LKey: string;
+  LValue: string;
+begin
+  if not (Sender is TValueListEditor) then
+    Exit;
+
+  LEditor := TValueListEditor(Sender);
+  if LEditor.Row < 1 then
+    Exit;
+
+  LKey := LEditor.Keys[LEditor.Row];
+  LValue := LEditor.Values[LKey];
+
+  if TFormConnectionStringEditor.Execute(LValue) then
+    LEditor.Values[LKey] := LValue;
+end;
+
+procedure TConfigurationUI.EditorMouseMove(Sender: TObject; Shift: TShiftState;
+  X, Y: Integer);
+var
+  LEditor: TValueListEditor;
+  LCol, LRow: Integer;
+  LSection, LKey, LFullKey: string;
+  LHint: string;
+begin
+  if not (Sender is TValueListEditor) then
+    Exit;
+
+  LEditor := TValueListEditor(Sender);
+  LEditor.MouseToCell(X, Y, LCol, LRow);
+
+  if (LRow >= 0) and (LRow < LEditor.Strings.Count) then
+  begin
+    LSection := LEditor.HelpKeyword;
+    LKey := LEditor.Strings.Names[LRow];
+
+    if LKey <> '' then
+    begin
+      // Beschreibung aus Dictionary holen und als Hint anzeigen
+      LFullKey := LSection + '/' + LKey;
+      if FDescriptions.TryGetValue(LFullKey, LHint) and (LHint <> '') then
+        LEditor.Hint := LHint
+      else
+        LEditor.Hint := LKey;
+    end;
   end;
 end;
 
@@ -317,6 +382,10 @@ begin
           LValue := FConfig.Configuration.ReadString(
             LConfigItem.Section, LConfigItem.Name, LConfigItem.Default);
           LEditor.Values[LKey] := LValue;
+
+          // Set edit style for connection string editor
+          if LConfigItem.HasConnectionStringEditor then
+            LEditor.ItemProps[LKey].EditStyle := esEllipsis;
         end;
 
         // Remove default empty entry if present

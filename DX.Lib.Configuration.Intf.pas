@@ -1,4 +1,4 @@
-unit DX.Classes.Configuration.Intf;
+unit DX.Lib.Configuration.Intf;
 
 interface
 

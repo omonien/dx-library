@@ -1,10 +1,10 @@
-unit DX.Classes.Configuration;
+unit DX.Lib.Configuration;
 
 interface
 
 uses
   System.Classes, System.SysUtils, System.IniFiles, System.Rtti, System.Generics.Collections,
-  DX.Classes.Singleton, DX.Classes.Strings, DX.Classes.Attributes, DX.Classes.Configuration.Intf, DX.Utils.Logger;
+  DX.Classes.Singleton, DX.Classes.Strings, DX.Classes.Attributes, DX.Lib.Configuration.Intf, DX.Utils.Logger;
 
 type
 
@@ -24,6 +24,7 @@ type
     Section: string;
     Default: string;
     IsEncrypted: Boolean;
+    HasConnectionStringEditor: Boolean;
     property Key: string read GetKey;
     procedure AssignDescription(AProperty: TRttiProperty);
     constructor Create(const AName: string);
@@ -63,6 +64,9 @@ type
   end;
 
   ConfigValueEncryptedAttribute = class(TCustomAttribute)
+  end;
+
+  ConnectionStringEditorAttribute = class(TCustomAttribute)
   end;
 
   TConfigurationManager<T: class> = class abstract(TInterfacedSingleton<T>, IConfiguration)
@@ -271,6 +275,7 @@ begin
         LAttributes := LProperty.GetAttributes;
         LConfigItem.Name := '';
         LConfigItem.IsEncrypted := false;
+        LConfigItem.HasConnectionStringEditor := false;
         for LAttribute in LAttributes do
         begin
           if LAttribute is ConfigValueAttribute then
@@ -283,6 +288,10 @@ begin
           if LAttribute is ConfigValueEncryptedAttribute then
           begin
             LConfigItem.IsEncrypted := true;
+          end;
+          if LAttribute is ConnectionStringEditorAttribute then
+          begin
+            LConfigItem.HasConnectionStringEditor := true;
           end;
         end;
         if LConfigItem.Name > '' then

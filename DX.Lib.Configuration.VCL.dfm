@@ -94,7 +94,7 @@ object ConfigurationUI: TConfigurationUI
       end
       item
         Alignment = taRightJustify
-        Width = 250
+        Width = 330
       end>
     OnDblClick = StatusBarDblClick
   end
