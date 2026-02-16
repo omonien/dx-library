@@ -39,6 +39,8 @@ type
       var CanSelect: Boolean);
     procedure EditorEditButtonClick(Sender: TObject);
     procedure EditorExit(Sender: TObject);
+    procedure EditorDrawCell(Sender: TObject; ACol, ARow: Integer;
+      Rect: TRect; State: TGridDrawState);
     function CreateSectionHeader(const ACaption: string;
       ATop: Integer; AInvalid: Boolean = False): TPanel;
     function CreateSectionEditor(ATop: Integer;
@@ -154,6 +156,7 @@ begin
   Result.OnSelectCell := EditorSelectCell;
   Result.OnEditButtonClick := EditorEditButtonClick;
   Result.OnExit := EditorExit;
+  Result.OnDrawCell := EditorDrawCell;
   Result.ColWidths[0] := 250;
   Result.Options :=
   [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goEditing];
@@ -225,8 +228,31 @@ begin
     Exit;
 
   LEditor := TValueListEditor(Sender);
-  // Selektion aufheben wenn Grid den Fokus verliert
-  LEditor.Row := -1;
+  // Grid neu zeichnen ohne Fokus (OnDrawCell wird Selektion verstecken)
+  LEditor.Invalidate;
+end;
+
+procedure TConfigurationUI.EditorDrawCell(Sender: TObject; ACol, ARow: Integer;
+  Rect: TRect; State: TGridDrawState);
+var
+  LEditor: TValueListEditor;
+begin
+  if not (Sender is TValueListEditor) then
+    Exit;
+
+  LEditor := TValueListEditor(Sender);
+
+  // Wenn Zelle selektiert ist, aber Grid keinen Fokus hat:
+  // Selection-Hintergrund durch normalen Hintergrund ersetzen
+  if (gdSelected in State) and not LEditor.Focused then
+  begin
+    LEditor.Canvas.Brush.Color := LEditor.Color;
+    LEditor.Canvas.FillRect(Rect);
+
+    // Text normal zeichnen
+    LEditor.Canvas.TextRect(Rect, Rect.Left + 2, Rect.Top + 2,
+      LEditor.Cells[ACol, ARow]);
+  end;
 end;
 
 procedure TConfigurationUI.LoadConfig;
