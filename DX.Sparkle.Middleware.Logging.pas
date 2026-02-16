@@ -11,7 +11,7 @@ uses
 type
 
   /// <summary>
-  /// Logger-Klasse, in der der tatsächlich zu verwendende Logger
+  /// Logger-Klasse, in der der tatsï¿½chlich zu verwendende Logger
   /// konfiguriert werden kann. Muss ILogger implementieren, da dies im XData
   /// Framework erforderlich ist.
   /// </summary>
@@ -55,27 +55,27 @@ end;
 
 procedure TXDataLogger.Debug(const AValue: TValue);
 begin
-  DXLog(AValue.AsString);
+  DXLog(AValue.AsString, TLogLevel.Debug);
 end;
 
 procedure TXDataLogger.Error(const AValue: TValue);
 begin
-  DXLog(AValue.AsString);
+  DXLog(AValue.AsString, TLogLevel.Error);
 end;
 
 procedure TXDataLogger.Info(const AValue: TValue);
 begin
-  DXLog(AValue.AsString);
+  DXLog(AValue.AsString, TLogLevel.Info);
 end;
 
 procedure TXDataLogger.Trace(const AValue: TValue);
 begin
-  DXLog(AValue.AsString);
+  DXLog(AValue.AsString, TLogLevel.Debug);
 end;
 
 procedure TXDataLogger.Warning(const AValue: TValue);
 begin
-  DXLog(AValue.AsString);
+  DXLog(AValue.AsString, TLogLevel.Warn);
 end;
 
 end.
