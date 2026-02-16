@@ -147,7 +147,8 @@ begin
   Result.KeyOptions := [keyUnique];
 
   // Titel-Zeile ausblenden (nur DisplayOptions, FixedRows bleibt bei 1 aber unsichtbar)
-  Result.DisplayOptions := [doKeyColFixed, doAutoColResize];
+  // doColumnResize ist nötig damit der Edit-Button (Ellipsis) auf Mausklicks reagiert
+  Result.DisplayOptions := [doKeyColFixed, doAutoColResize, doColumnResize];
 
   Result.OnSelectCell := EditorSelectCell;
   Result.OnEditButtonClick := EditorEditButtonClick;
