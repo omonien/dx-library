@@ -146,7 +146,10 @@ begin
   Result.DefaultRowHeight := ROW_HEIGHT;
   Result.KeyOptions := [keyUnique];
 
-  // Titel-Zeile durch leere Captions verstecken statt DisplayOptions zu setzen
+  // DisplayOptions := [] verhindert unkontrolliertes horizontales Scrollen
+  Result.DisplayOptions := [];
+
+  // Titel-Zeile durch leere Captions verstecken
   Result.TitleCaptions.Clear;
   Result.TitleCaptions.Add('');
   Result.TitleCaptions.Add('');
@@ -156,9 +159,9 @@ begin
   Result.OnMouseMove := EditorMouseMove;
   Result.ColWidths[0] := 250;
   Result.ColWidths[1] := ScrollBox.ClientWidth - 250 - 4;
-  Result.Options := Result.Options + [goColSizing, goThumbTracking];
+  Result.Options := Result.Options + [goColSizing, goThumbTracking, goEditing];
 
-  // Scrollbars ausblenden
+  // Scrollbars ausblenden (per User-Anforderung)
   Result.ScrollBars := ssNone;
 
   // Hints aktivieren
