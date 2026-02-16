@@ -38,6 +38,8 @@ type
     procedure EditorSelectCell(Sender: TObject; ACol, ARow: Integer;
       var CanSelect: Boolean);
     procedure EditorEditButtonClick(Sender: TObject);
+    procedure EditorGetHint(Sender: TObject; ACol, ARow: Integer;
+      var HintText: string);
     function CreateSectionHeader(const ACaption: string;
       ATop: Integer; AInvalid: Boolean = False): TPanel;
     function CreateSectionEditor(ATop: Integer;
@@ -152,6 +154,7 @@ begin
 
   Result.OnSelectCell := EditorSelectCell;
   Result.OnEditButtonClick := EditorEditButtonClick;
+  Result.OnGetHint := EditorGetHint;
   Result.ColWidths[0] := 250;
   Result.Options :=
   [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goEditing];
@@ -213,6 +216,37 @@ begin
 
   if TFormConnectionStringEditor.Execute(LValue) then
     LEditor.Values[LKey] := LValue;
+end;
+
+procedure TConfigurationUI.EditorGetHint(Sender: TObject; ACol, ARow: Integer;
+  var HintText: string);
+var
+  LEditor: TValueListEditor;
+  LSection, LKey, LFullKey: string;
+begin
+  if not (Sender is TValueListEditor) then
+    Exit;
+
+  LEditor := TValueListEditor(Sender);
+
+  if (ARow >= 0) and (ARow < LEditor.Strings.Count) then
+  begin
+    LSection := LEditor.HelpKeyword;
+    LKey := LEditor.Strings.Names[ARow];
+
+    if LKey <> '' then
+    begin
+      // Beschreibung aus Dictionary holen und als Hint anzeigen
+      LFullKey := LSection + '/' + LKey;
+      if FDescriptions.TryGetValue(LFullKey, HintText) then
+      begin
+        if HintText = '' then
+          HintText := LKey;
+      end
+      else
+        HintText := LKey;
+    end;
+  end;
 end;
 
 procedure TConfigurationUI.LoadConfig;
