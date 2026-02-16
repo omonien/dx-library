@@ -414,6 +414,25 @@ begin
     end;
   end;
 
+  // Cleanup: Delete empty sections (old invalid entries)
+  LSections := TStringList.Create;
+  try
+    FConfig.Configuration.ReadSections(LSections);
+    for var LSection in LSections do
+    begin
+      LKeys := TStringList.Create;
+      try
+        FConfig.Configuration.ReadSection(LSection, LKeys);
+        if LKeys.Count = 0 then
+          FConfig.Configuration.EraseSection(LSection);
+      finally
+        FreeAndNil(LKeys);
+      end;
+    end;
+  finally
+    FreeAndNil(LSections);
+  end;
+
   FConfig.Save;
 end;
 
