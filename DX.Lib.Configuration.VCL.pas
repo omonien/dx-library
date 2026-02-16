@@ -38,7 +38,6 @@ type
     procedure EditorSelectCell(Sender: TObject; ACol, ARow: Integer;
       var CanSelect: Boolean);
     procedure EditorEditButtonClick(Sender: TObject);
-    procedure EditorMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
     function CreateSectionHeader(const ACaption: string;
       ATop: Integer; AInvalid: Boolean = False): TPanel;
     function CreateSectionEditor(ATop: Integer;
@@ -146,9 +145,6 @@ begin
   Result.DefaultRowHeight := ROW_HEIGHT;
   Result.KeyOptions := [keyUnique];
 
-  // DisplayOptions := [] verhindert unkontrolliertes horizontales Scrollen
-  Result.DisplayOptions := [];
-
   // Titel-Zeile durch leere Captions verstecken
   Result.TitleCaptions.Clear;
   Result.TitleCaptions.Add('');
@@ -156,10 +152,10 @@ begin
 
   Result.OnSelectCell := EditorSelectCell;
   Result.OnEditButtonClick := EditorEditButtonClick;
-  Result.OnMouseMove := EditorMouseMove;
   Result.ColWidths[0] := 250;
-  Result.ColWidths[1] := ScrollBox.ClientWidth - 250 - 4;
-  Result.Options := Result.Options + [goColSizing, goThumbTracking, goEditing];
+  Result.Options :=
+  [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goEditing];
+  Result.DisplayOptions := [doKeyColFixed, doAutoColResize];
 
   // Scrollbars ausblenden (per User-Anforderung)
   Result.ScrollBars := ssNone;
@@ -193,7 +189,7 @@ var
 begin
   CanSelect := True;
   LEditor := Sender as TValueListEditor;
-  if (ARow >= 1) and (ARow <= LEditor.Strings.Count) then
+  if (ARow >= 0) and (ARow < LEditor.Strings.Count) then
   begin
     LSection := LEditor.HelpKeyword;
     LKey := LSection + '/' + LEditor.Keys[ARow];
@@ -211,45 +207,12 @@ begin
     Exit;
 
   LEditor := TValueListEditor(Sender);
-  if LEditor.Row < 1 then
-    Exit;
 
   LKey := LEditor.Keys[LEditor.Row];
   LValue := LEditor.Values[LKey];
 
   if TFormConnectionStringEditor.Execute(LValue) then
     LEditor.Values[LKey] := LValue;
-end;
-
-procedure TConfigurationUI.EditorMouseMove(Sender: TObject; Shift: TShiftState;
-  X, Y: Integer);
-var
-  LEditor: TValueListEditor;
-  LCol, LRow: Integer;
-  LSection, LKey, LFullKey: string;
-  LHint: string;
-begin
-  if not (Sender is TValueListEditor) then
-    Exit;
-
-  LEditor := TValueListEditor(Sender);
-  LEditor.MouseToCell(X, Y, LCol, LRow);
-
-  if (LRow >= 0) and (LRow < LEditor.Strings.Count) then
-  begin
-    LSection := LEditor.HelpKeyword;
-    LKey := LEditor.Strings.Names[LRow];
-
-    if LKey <> '' then
-    begin
-      // Beschreibung aus Dictionary holen und als Hint anzeigen
-      LFullKey := LSection + '/' + LKey;
-      if FDescriptions.TryGetValue(LFullKey, LHint) and (LHint <> '') then
-        LEditor.Hint := LHint
-      else
-        LEditor.Hint := LKey;
-    end;
-  end;
 end;
 
 procedure TConfigurationUI.LoadConfig;
