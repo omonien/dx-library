@@ -44,7 +44,7 @@ type
   /// Do not create direct instances of TInterfacedSingleton - only descend from it.
   /// </remarks>
   TInterfacedSingleton<T: Class> = class abstract(TObject)
-  strict private
+  protected
     class var FDefaultInstance: T;
   protected
     { IInterface }

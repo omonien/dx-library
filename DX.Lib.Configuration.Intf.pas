@@ -1,4 +1,4 @@
-unit DX.Classes.Configuration.Intf;
+unit DX.Lib.Configuration.Intf;
 
 interface
 
@@ -7,8 +7,9 @@ uses System.Classes, System.SysUtils, System.IniFiles;
 type
 
   IConfiguration = interface(IInterface)
-    ['{DED1A30D-4C03-4BD6-BC20-DCFC78FB0857}']
+    ['{DED1A30D-4C03-4BD6-BC20-DCFC78FB0858}']
     function GetConfiguration: TCustomIniFile;
+    procedure Save;
     property Configuration: TCustomIniFile read GetConfiguration;
   end;
 

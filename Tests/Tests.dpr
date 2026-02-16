@@ -16,7 +16,8 @@ uses
   DX.Settings.Json in '..\DX.Settings.Json.pas',
   Tests.Attributes in 'Tests.Attributes.pas',
   Tests.Configuration in 'Tests.Configuration.pas',
-  Tests.ConfigurationAnsi in 'Tests.ConfigurationAnsi.pas';
+  Tests.ConfigurationAnsi in 'Tests.ConfigurationAnsi.pas',
+  Tests.Configuration.Subclass in 'Tests.Configuration.Subclass.pas';
 
 var
   runner : ITestRunner;

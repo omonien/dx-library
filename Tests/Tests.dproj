@@ -81,6 +81,7 @@
         <DCCReference Include="Tests.Attributes.pas"/>
         <DCCReference Include="Tests.Configuration.pas"/>
         <DCCReference Include="Tests.ConfigurationAnsi.pas"/>
+        <DCCReference Include="Tests.Configuration.Subclass.pas"/>
         <BuildConfiguration Include="Base">
             <Key>Base</Key>
         </BuildConfiguration>

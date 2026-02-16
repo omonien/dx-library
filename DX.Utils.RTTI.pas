@@ -79,6 +79,11 @@ type
     class function Construct<T: Class>: T;
 
     /// <summary>
+    /// Creates and returns an instance of AClass (non-generic variant)
+    /// </summary>
+    class function ConstructClass(AClass: TClass): TObject;
+
+    /// <summary>
     /// Creates a deep copy of AInstance, by Marshaling/Unmarshaling
     /// it to/from Json.
     /// </summary>
@@ -153,6 +158,20 @@ begin
   LInstance := LConstructor.Invoke(LClassType.AsInstance.MetaclassType, []);
 
   Result := LInstance.AsObject as T;
+end;
+
+class function TClassConstructor.ConstructClass(AClass: TClass): TObject;
+var
+  LInstance: TValue;
+  LContext: TRttiContext;
+  LClassType: TRTTIType;
+  LConstructor: TRttiMethod;
+begin
+  LContext := TRttiContext.Create();
+  LClassType := LContext.GetType(AClass);
+  LConstructor := GetConstructor(LClassType);
+  LInstance := LConstructor.Invoke(LClassType.AsInstance.MetaclassType, []);
+  Result := LInstance.AsObject;
 end;
 
 { TObjectHelper }

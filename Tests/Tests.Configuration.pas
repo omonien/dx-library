@@ -3,7 +3,7 @@
 interface
 
 uses
-  DUnitX.TestFramework, DX.Classes.Configuration, System.Classes, System.SysUtils;
+  DUnitX.TestFramework, DX.Lib.Configuration, System.Classes, System.SysUtils;
 
 const
   CONFIG_SECTION = 'test';

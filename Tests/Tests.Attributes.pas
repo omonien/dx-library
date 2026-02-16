@@ -5,7 +5,7 @@ interface
 uses
   System.Classes, System.SysUtils,
   DUnitX.TestFramework,
-  DX.Classes.Attributes, DX.Classes.Configuration;
+  DX.Classes.Attributes, DX.Lib.Configuration;
 
 type
 
