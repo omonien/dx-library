@@ -271,6 +271,10 @@ begin
           FConfig.Configuration.ReadSection(LIniSection, LIniKeys);
           for var LIniKey in LIniKeys do
           begin
+            // Skip comment lines (keys starting with # or ;)
+            if (LIniKey.Length > 0) and ((LIniKey[1] = '#') or (LIniKey[1] = ';')) then
+              Continue;
+
             if not LRegisteredKeys.ContainsKey(
               UpperCase(LIniSection) + '/' + UpperCase(LIniKey)) then
             begin
@@ -374,7 +378,12 @@ begin
       try
         FConfig.Configuration.ReadSection(LSection, LKeys);
         for var LKeyName in LKeys do
+        begin
+          // Skip comment lines (keys starting with # or ;)
+          if (LKeyName.Length > 0) and ((LKeyName[1] = '#') or (LKeyName[1] = ';')) then
+            Continue;
           FConfig.Configuration.DeleteKey(LSection, LKeyName);
+        end;
       finally
         FreeAndNil(LKeys);
       end;
