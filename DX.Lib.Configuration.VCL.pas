@@ -146,9 +146,10 @@ begin
   Result.DefaultRowHeight := ROW_HEIGHT;
   Result.KeyOptions := [keyUnique];
 
-  // Titel-Zeile ausblenden (nur DisplayOptions, FixedRows bleibt bei 1 aber unsichtbar)
-  // doColumnResize ist nötig damit der Edit-Button (Ellipsis) auf Mausklicks reagiert
-  Result.DisplayOptions := [doKeyColFixed, doAutoColResize, doColumnResize];
+  // Titel-Zeile durch leere Captions verstecken statt DisplayOptions zu setzen
+  Result.TitleCaptions.Clear;
+  Result.TitleCaptions.Add('');
+  Result.TitleCaptions.Add('');
 
   Result.OnSelectCell := EditorSelectCell;
   Result.OnEditButtonClick := EditorEditButtonClick;
