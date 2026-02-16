@@ -38,6 +38,7 @@ type
     procedure EditorSelectCell(Sender: TObject; ACol, ARow: Integer;
       var CanSelect: Boolean);
     procedure EditorEditButtonClick(Sender: TObject);
+    procedure EditorExit(Sender: TObject);
     function CreateSectionHeader(const ACaption: string;
       ATop: Integer; AInvalid: Boolean = False): TPanel;
     function CreateSectionEditor(ATop: Integer;
@@ -152,6 +153,7 @@ begin
 
   Result.OnSelectCell := EditorSelectCell;
   Result.OnEditButtonClick := EditorEditButtonClick;
+  Result.OnExit := EditorExit;
   Result.ColWidths[0] := 250;
   Result.Options :=
   [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goEditing];
@@ -213,6 +215,18 @@ begin
 
   if TFormConnectionStringEditor.Execute(LValue) then
     LEditor.Values[LKey] := LValue;
+end;
+
+procedure TConfigurationUI.EditorExit(Sender: TObject);
+var
+  LEditor: TValueListEditor;
+begin
+  if not (Sender is TValueListEditor) then
+    Exit;
+
+  LEditor := TValueListEditor(Sender);
+  // Selektion aufheben wenn Grid den Fokus verliert
+  LEditor.Row := -1;
 end;
 
 procedure TConfigurationUI.LoadConfig;
