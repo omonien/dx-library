@@ -10,10 +10,9 @@ uses
 type
   /// <summary>
   /// Loglevel der Nachrichten
-  /// Aktuell noch nicht implementiert
+  /// Von höchster zu niedrigster Priorität: Trace -> Debug -> Info -> Warn -> Error -> None
   /// </summary>
-    //Todo: implement
-  TLogLevel = (None, Error, Debug, Warn, Info);
+  TLogLevel = (Trace, Debug, Info, Warn, Error, None);
 
   ILogger = interface(IInterface)
     ['{05784DCF-00EB-424D-AC65-74D018CD768E}']
