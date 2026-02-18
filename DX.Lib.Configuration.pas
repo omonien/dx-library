@@ -144,6 +144,11 @@ uses
 class procedure TConfigurationManager<T>.RegisterConcreteClass(AClass: TClass);
 begin
   FConcreteClass := AClass;
+  // Wenn der Singleton bereits mit dem falschen (Basis-)Typ erstellt wurde
+  // (Race-Condition bei Initialisierungsreihenfolge), zurücksetzen damit
+  // er beim nächsten Default-Aufruf korrekt als konkreter Typ erstellt wird.
+  if Assigned(FDefaultInstance) and (FDefaultInstance.ClassType <> AClass) then
+    FreeAndNil(FDefaultInstance);
 end;
 
 class function TConfigurationManager<T>.Default: T;
