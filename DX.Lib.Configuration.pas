@@ -144,10 +144,6 @@ uses
 class procedure TConfigurationManager<T>.RegisterConcreteClass(AClass: TClass);
 begin
   FConcreteClass := AClass;
-  // If a singleton was already created with the wrong (base) class type,
-  // reset it so it gets recreated as the correct concrete class on next Default call.
-  if Assigned(FDefaultInstance) and (FDefaultInstance.ClassType <> AClass) then
-    FreeAndNil(FDefaultInstance);
 end;
 
 class function TConfigurationManager<T>.Default: T;
