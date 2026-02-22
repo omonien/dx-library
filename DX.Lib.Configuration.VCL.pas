@@ -6,7 +6,7 @@ uses
   System.SysUtils, System.Variants, System.Classes, System.Generics.Collections,
   Winapi.Windows, Winapi.Messages,
   VCL.Graphics, VCL.Controls, VCL.Forms, VCL.Dialogs, VCL.Grids, VCL.ValEdit,
-  VCL.ComCtrls, VCL.StdCtrls, VCL.ExtCtrls,
+  VCL.ComCtrls, VCL.StdCtrls, VCL.ExtCtrls, VCL.Menus, VCL.Clipbrd,
   DX.Lib.Configuration.Intf;
 
 type
@@ -30,6 +30,7 @@ type
     FConfigVersionKey: string;
     FConfigVersionValue: string;
     FSectionEditors: TDictionary<string, TValueListEditor>;
+    FReadOnlyPopup: TPopupMenu;
   protected
     procedure LoadConfig;
     procedure SaveConfig;
@@ -46,6 +47,8 @@ type
     function CreateSectionEditor(ATop: Integer;
       AReadOnly: Boolean = False; AInvalid: Boolean = False): TValueListEditor;
     procedure AdjustEditorHeight(AEditor: TValueListEditor);
+    procedure ReadOnlyCopyValue(Sender: TObject);
+    function GetReadOnlyPopup: TPopupMenu;
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
@@ -175,7 +178,10 @@ begin
   end;
 
   if AReadOnly then
+  begin
     Result.Options := Result.Options - [goEditing];
+    Result.PopupMenu := GetReadOnlyPopup;
+  end;
 end;
 
 procedure TConfigurationUI.AdjustEditorHeight(AEditor: TValueListEditor);
@@ -252,6 +258,35 @@ begin
     // Text normal zeichnen
     LEditor.Canvas.TextRect(Rect, Rect.Left + 2, Rect.Top + 2,
       LEditor.Cells[ACol, ARow]);
+  end;
+end;
+
+function TConfigurationUI.GetReadOnlyPopup: TPopupMenu;
+var
+  LItem: TMenuItem;
+begin
+  if FReadOnlyPopup = nil then
+  begin
+    FReadOnlyPopup := TPopupMenu.Create(Self);
+    LItem := TMenuItem.Create(FReadOnlyPopup);
+    LItem.Caption := 'Wert kopieren';
+    LItem.OnClick := ReadOnlyCopyValue;
+    FReadOnlyPopup.Items.Add(LItem);
+  end;
+  Result := FReadOnlyPopup;
+end;
+
+procedure TConfigurationUI.ReadOnlyCopyValue(Sender: TObject);
+var
+  LEditor: TValueListEditor;
+  LKey, LValue: string;
+begin
+  LEditor := FReadOnlyPopup.PopupComponent as TValueListEditor;
+  if (LEditor.Row >= 1) and (LEditor.Row < LEditor.RowCount) then
+  begin
+    LKey := LEditor.Keys[LEditor.Row];
+    LValue := LEditor.Values[LKey];
+    Clipboard.AsText := LValue;
   end;
 end;
 
