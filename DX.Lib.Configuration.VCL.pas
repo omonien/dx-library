@@ -62,7 +62,8 @@ type
     /// diesen Wert gesetzt (nicht manuell editierbar).
     /// </summary>
     class function ShowModal(AConfig: IConfiguration;
-      const ANewConfigVersion: string = ''): TModalResult; reintroduce;
+      const ANewConfigVersion: string = '';
+      AReadOnly: Boolean = False): TModalResult; reintroduce;
   end;
 
 implementation
@@ -588,7 +589,7 @@ begin
 end;
 
 class function TConfigurationUI.ShowModal(AConfig: IConfiguration;
-  const ANewConfigVersion: string): TModalResult;
+  const ANewConfigVersion: string; AReadOnly: Boolean): TModalResult;
 var
   LForm: TConfigurationUI;
 begin
@@ -597,6 +598,14 @@ begin
     FConfig := AConfig;
     FNewConfigVersion := ANewConfigVersion;
     LForm.LoadConfig;
+    if AReadOnly then
+    begin
+      LForm.ButtonOK.Enabled := False;
+      LForm.Caption := LForm.Caption + ' (nur Ansicht)';
+      // Alle Editoren auf ReadOnly setzen
+      for var LEditor in LForm.FSectionEditors.Values do
+        LEditor.Options := LEditor.Options - [goEditing];
+    end;
     Result := TForm(LForm).ShowModal;
   finally
     FreeAndNil(LForm);
