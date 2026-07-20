@@ -14,7 +14,8 @@ uses
   {$ENDIF }
   DUnitX.TestFramework,
   Dx.Utils.Logger.Tests in 'Dx.Utils.Logger.Tests.pas',
-  DX.Utils.Logger in '..\DX.Utils.Logger.pas';
+  DX.Utils.Logger in '..\DX.Utils.Logger.pas',
+  DX.Lib.Configuration.VCL.Tests in 'DX.Lib.Configuration.VCL.Tests.pas';
 
 {$IFNDEF TESTINSIGHT}
 var

@@ -76,9 +76,13 @@ uses
 {$R *.dfm}
 
 const
+  // Basismasse bei 96 DPI — muessen zur Laufzeit via ScaleValue auf die
+  // aktuelle Form-PPI skaliert werden, da die VCL-Formularskalierung
+  // dynamisch erzeugte Controls nicht automatisch nachskaliert (HighDPI)
   SECTION_HEADER_HEIGHT = 28;
   ROW_HEIGHT = 22;
   SECTION_GAP = 6;
+  KEY_COLUMN_WIDTH = 250;
   HEADER_COLOR = $005A5A5A;
   INVALID_HEADER_COLOR = $002020C0;
   INVALID_BG_COLOR = $00E8E0F0;
@@ -116,7 +120,7 @@ begin
   Result := TPanel.Create(Self);
   Result.Parent := ScrollBox;
   Result.Top := ATop;
-  Result.Height := SECTION_HEADER_HEIGHT;
+  Result.Height := ScaleValue(SECTION_HEADER_HEIGHT);
   Result.Align := alTop;
   Result.BevelOuter := bvNone;
   Result.ParentBackground := False;
@@ -130,10 +134,10 @@ begin
   LLabel.Parent := Result;
   LLabel.Align := alClient;
   LLabel.AlignWithMargins := True;
-  LLabel.Margins.Left := 8;
-  LLabel.Margins.Top := 2;
-  LLabel.Margins.Right := 8;
-  LLabel.Margins.Bottom := 2;
+  LLabel.Margins.Left := ScaleValue(8);
+  LLabel.Margins.Top := ScaleValue(2);
+  LLabel.Margins.Right := ScaleValue(8);
+  LLabel.Margins.Bottom := ScaleValue(2);
   LLabel.Font.Style := [fsBold];
   LLabel.Font.Color := clWhite;
   LLabel.Font.Size := 10;
@@ -147,9 +151,9 @@ begin
   Result := TValueListEditor.Create(Self);
   Result.Parent := ScrollBox;
   Result.Top := ATop;
-  Result.Height := ROW_HEIGHT + 4;
+  Result.Height := ScaleValue(ROW_HEIGHT + 4);
   Result.Align := alTop;
-  Result.DefaultRowHeight := ROW_HEIGHT;
+  Result.DefaultRowHeight := ScaleValue(ROW_HEIGHT);
   Result.KeyOptions := [keyUnique];
 
   // Titel-Zeile durch leere Captions verstecken
@@ -161,7 +165,7 @@ begin
   Result.OnEditButtonClick := EditorEditButtonClick;
   Result.OnExit := EditorExit;
   Result.OnDrawCell := EditorDrawCell;
-  Result.ColWidths[0] := 250;
+  Result.ColWidths[0] := ScaleValue(KEY_COLUMN_WIDTH);
   Result.Options :=
   [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goEditing];
   Result.DisplayOptions := [doKeyColFixed, doAutoColResize];
@@ -189,7 +193,8 @@ procedure TConfigurationUI.AdjustEditorHeight(AEditor: TValueListEditor);
 begin
   // DisplayOptions=[] versteckt die Titel-Zeile, aber RowCount zählt sie noch mit
   // Strings.Count gibt die Anzahl der Datenzeilen ohne Fixed Row
-  AEditor.Height := AEditor.Strings.Count * (ROW_HEIGHT + 1) + 4;
+  // +1 = GridLineWidth (bleibt auch bei HighDPI 1 px)
+  AEditor.Height := AEditor.Strings.Count * (ScaleValue(ROW_HEIGHT) + 1) + ScaleValue(4);
 end;
 
 procedure TConfigurationUI.EditorSelectCell(Sender: TObject;
@@ -257,7 +262,7 @@ begin
     LEditor.Canvas.FillRect(Rect);
 
     // Text normal zeichnen
-    LEditor.Canvas.TextRect(Rect, Rect.Left + 2, Rect.Top + 2,
+    LEditor.Canvas.TextRect(Rect, Rect.Left + ScaleValue(2), Rect.Top + ScaleValue(2),
       LEditor.Cells[ACol, ARow]);
   end;
 end;
@@ -412,7 +417,7 @@ begin
 
         // Section header
         CreateSectionHeader(LSection, LTop);
-        Inc(LTop, SECTION_HEADER_HEIGHT);
+        Inc(LTop, ScaleValue(SECTION_HEADER_HEIGHT));
 
         // Section editor
         LEditor := CreateSectionEditor(LTop);
@@ -439,14 +444,14 @@ begin
 
         // Adjust height to fit rows
         AdjustEditorHeight(LEditor);
-        Inc(LTop, LEditor.Height + SECTION_GAP);
+        Inc(LTop, LEditor.Height + ScaleValue(SECTION_GAP));
       end;
 
       // Invalid entries section
       if LInvalidEntries.Count > 0 then
       begin
         CreateSectionHeader('Ungueltige Eintraege (nicht registriert)', LTop, True);
-        Inc(LTop, SECTION_HEADER_HEIGHT);
+        Inc(LTop, ScaleValue(SECTION_HEADER_HEIGHT));
 
         LEditor := CreateSectionEditor(LTop, True, True);
         LEditor.HelpKeyword := '';
