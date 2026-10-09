@@ -17,7 +17,8 @@ uses
   Tests.Attributes in 'Tests.Attributes.pas',
   Tests.Configuration in 'Tests.Configuration.pas',
   Tests.ConfigurationAnsi in 'Tests.ConfigurationAnsi.pas',
-  Tests.Configuration.Subclass in 'Tests.Configuration.Subclass.pas';
+  Tests.Configuration.Subclass in 'Tests.Configuration.Subclass.pas',
+  Tests.Configuration.Quotes in 'Tests.Configuration.Quotes.pas';
 
 var
   runner : ITestRunner;
