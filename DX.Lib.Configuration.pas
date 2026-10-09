@@ -69,12 +69,53 @@ type
   ConnectionStringEditorAttribute = class(TCustomAttribute)
   end;
 
+  /// <summary>
+  /// INI storage of TConfigurationManager: a TMemIniFile that handles quoted values like the
+  /// Windows profile API (GetPrivateProfileString), which TIniFile uses.
+  /// </summary>
+  /// <remarks>
+  /// A plain TMemIniFile returns a value verbatim: Password="secret" would reach the application
+  /// including its quotes, while TIniFile returns secret. ReadString therefore removes one pair of
+  /// matching enclosing quotes ("..." or '...'); inner and unpaired quotes are data. WriteString
+  /// stores a value in double quotes only if it would otherwise not come back unchanged after a
+  /// save and reload (surrounding whitespace, or the value is itself enclosed in matching quotes);
+  /// all other values are stored verbatim, so existing files keep their format. Typed reads
+  /// (ReadInteger, ReadBool, ...) go through ReadString and see the unquoted value, too.
+  /// ReadSectionValues still returns the stored form. Line breaks inside values remain
+  /// unsupported, as with any INI file.
+  /// </remarks>
+  TConfigIniFile = class(TMemIniFile)
+  public
+    /// <summary>
+    /// Returns ARawValue the way GetPrivateProfileString returns an INI value: surrounding
+    /// whitespace (characters up to #32, as GetPrivateProfileString and TMemIniFile trim it)
+    /// removed, then exactly one pair of matching enclosing quotes removed.
+    /// </summary>
+    class function UnquoteValue(const ARawValue: string): string; static;
+    /// <summary>
+    /// Returns the form in which AValue (without line breaks) has to be stored so that reading
+    /// it back - from memory or after a save and reload - returns AValue unchanged.
+    /// </summary>
+    class function QuoteValue(const AValue: string): string; static;
+    /// <summary>
+    /// Like TMemIniFile.ReadString, but stored values are unquoted (see UnquoteValue).
+    /// ADefault is returned unchanged - deliberately unlike GetPrivateProfileString, which strips
+    /// its trailing blanks - because TConfigurationManager compares the result against it.
+    /// A key line without "=" counts as missing, as in TMemIniFile and GetPrivateProfileString.
+    /// </summary>
+    function ReadString(const ASection, AIdent, ADefault: string): string; override;
+    /// <summary>
+    /// Like TMemIniFile.WriteString, but stores AValue in the form returned by QuoteValue.
+    /// </summary>
+    procedure WriteString(const ASection, AIdent, AValue: string); override;
+  end;
+
   TConfigurationManager<T: class> = class abstract(TInterfacedSingleton<T>, IConfiguration)
   strict private
     FEncryptionKey: string;
   private
     class var FConcreteClass: TClass;
-    var FStorage: TMemIniFile;
+    var FStorage: TConfigIniFile;
     FStorageFile: string;
     FDescription: StringList;
     procedure AddComments(
@@ -94,7 +135,9 @@ type
     /// </summary>
     /// <remarks>
     /// All GetConfigValueForProperty functions are to be used in Config
-    /// Property's Getter methods only;
+    /// Property's Getter methods only; <br />
+    /// A value enclosed in matching quotes in the config file is returned
+    /// without them, as TIniFile does (see TConfigIniFile).
     /// </remarks>
     function GetConfigValueForProperty(const AProperty: string): Variant; overload;
 
@@ -484,7 +527,7 @@ begin
   end;
 
   FStorage.Free;
-  FStorage := TMemIniFile.Create(FStorageFile, LEncoding);
+  FStorage := TConfigIniFile.Create(FStorageFile, LEncoding);
 end;
 
 procedure TConfigurationManager<T>.WriteStorage;
@@ -671,6 +714,52 @@ end;
 constructor ConfigDirectoryAttribute.Create(const ADirectory: string);
 begin
   inherited Create(ADirectory);
+end;
+
+{ TConfigIniFile }
+
+class function TConfigIniFile.UnquoteValue(const ARawValue: string): string;
+begin
+  // Mirrors GetPrivateProfileString (checked against Windows 11): whitespace around the value is
+  // not part of it, then a single pair of matching enclosing quotes is removed - "a"b" becomes
+  // a"b, ""a"" becomes "a". A lone quote character and unpaired or mismatched quotes stay.
+  Result := ARawValue.Trim;
+  if (Result.Length >= 2) and CharInSet(Result.Chars[0], ['"', '''']) and
+    (Result.Chars[Result.Length - 1] = Result.Chars[0]) then
+  begin
+    Result := Result.Substring(1, Result.Length - 2);
+  end;
+end;
+
+class function TConfigIniFile.QuoteValue(const AValue: string): string;
+begin
+  // Quote only where needed, so ordinary values keep their file format. A value in double quotes
+  // always comes back unchanged: UnquoteValue removes exactly that pair, and TMemIniFile's line
+  // trimming on load cannot reach past the quotes.
+  if UnquoteValue(AValue) = AValue then
+    Result := AValue
+  else
+    Result := '"' + AValue + '"';
+end;
+
+function TConfigIniFile.ReadString(const ASection, AIdent, ADefault: string): string;
+const
+  // Marks "no stored value" (key missing, or a line without "="). A stored value can never be
+  // a lone #0: TMemIniFile trims every line on load, and WriteString would quote it.
+  cNoValue = #0;
+var
+  LRawValue: string;
+begin
+  LRawValue := inherited ReadString(ASection, AIdent, cNoValue);
+  if LRawValue = cNoValue then
+    Result := ADefault
+  else
+    Result := UnquoteValue(LRawValue);
+end;
+
+procedure TConfigIniFile.WriteString(const ASection, AIdent, AValue: string);
+begin
+  inherited WriteString(ASection, AIdent, QuoteValue(AValue));
 end;
 
 end.
