@@ -398,7 +398,15 @@ begin
     begin
       LEncrypted[i] := LCipher.Cypher(LUnencrypted[i]);
     end;
-    result := TNetEncoding.Base64.EncodeBytesToString(LEncrypted);
+    // TNetEncoding.Base64 inserts a line break every 76 characters. Since the INI
+    // storage is line-based (TMemIniFile), a wrapped value used to split the "Key="
+    // entry across several physical lines and corrupted the file on the next load.
+    // TNetEncoding.Base64String does not wrap, so the stored value always stays on
+    // one line. Decode is unaffected by this change: values that were short enough
+    // to never wrap (<= 57 bytes) decode exactly as before; longer, already-wrapped
+    // values written by the old code were already corrupted on disk and cannot be
+    // recovered here.
+    result := TNetEncoding.Base64String.EncodeBytesToString(LEncrypted);
   finally
     FreeAndNil(LCipher);
   end;
