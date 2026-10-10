@@ -171,6 +171,14 @@ type
     /// </summary>
     [Test]
     procedure QuotedEncryptedValueIsDecrypted;
+
+    /// <summary>
+    /// A long encrypted value survives save and reload. TNetEncoding.Base64 inserts a line
+    /// break every 76 characters, which used to split the INI value across lines and corrupt
+    /// it on reload; the encoder must produce a single line.
+    /// </summary>
+    [Test]
+    procedure LongEncryptedValueSurvivesReload;
   end;
 
 implementation
@@ -435,6 +443,38 @@ begin
   LConfig := TQuotesConfig.Create;
   try
     Assert.AreEqual('elke-test', LConfig.Secret);
+  finally
+    FreeAndNil(LConfig);
+  end;
+end;
+
+procedure TConfigQuotesTests.LongEncryptedValueSurvivesReload;
+const
+  // 200 chars / UTF8 bytes, well above the 57-byte threshold at which
+  // TNetEncoding.Base64's 76-char line wrap would insert a line break.
+  cLongValue = 'elke-test-0123456789-0123456789-0123456789-0123456789-0123456789' +
+    '-0123456789-0123456789-0123456789-0123456789-0123456789-0123456789' +
+    '-0123456789-0123456789';
+var
+  LConfig: TQuotesConfig;
+  LEncrypted: string;
+begin
+  LConfig := TQuotesConfig.Create;
+  try
+    LConfig.Secret := cLongValue;
+    LConfig.Save;
+  finally
+    FreeAndNil(LConfig);
+  end;
+
+  // The stored value must be a single INI line - a line break in the middle
+  // would split it into two lines and corrupt the file.
+  LEncrypted := GetFileLine('Secret');
+  Assert.IsNotEmpty(LEncrypted, 'Secret must be stored as a single, complete line');
+
+  LConfig := TQuotesConfig.Create;
+  try
+    Assert.AreEqual(cLongValue, LConfig.Secret, 'after reload');
   finally
     FreeAndNil(LConfig);
   end;
