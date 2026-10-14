@@ -1,4 +1,4 @@
-unit DX.Data.Utils;
+﻿unit DX.Data.Utils;
 
 interface
 
@@ -43,6 +43,17 @@ type
     procedure AssignRecord(const ASource: IRecord);
   end;
 
+  /// <summary>
+  /// Splits a FireDAC connection string into its "Name=Value" segments.
+  /// </summary>
+  /// <remarks>
+  /// Segments are separated by ";" only. A ";" inside a {...} block is part of the
+  /// value, and the braces are kept verbatim (e.g. ODBCAdvanced={a;b}). Quotes have no
+  /// special meaning, nothing is trimmed and empty segments are skipped.
+  /// </remarks>
+  function SplitConnectionString(const AConnectionString: string): TArray<string>;
+
+type
   TFDConnectionHelper = class helper for TFDConnection
   public
     procedure SetParamsFromConnectionString(const AConnectionString: string);
@@ -119,16 +130,58 @@ end;
 
 procedure TFDConnectionHelper.SetParamsFromConnectionString(const AConnectionString: string);
 var
-  LConnectionString: TStringList;
+  LSegment: string;
 begin
   Params.Clear;
-  LConnectionString := TStringList.Create;
+  for LSegment in SplitConnectionString(AConnectionString) do
+  begin
+    Params.Add(LSegment);
+  end;
+end;
+
+function SplitConnectionString(const AConnectionString: string): TArray<string>;
+var
+  LSegments: TList<string>;
+  LStart: Integer;
+  LDepth: Integer;
+  I: Integer;
+
+  procedure AddSegment(AEnd: Integer);
+  begin
+    // AEnd is the index after the last character of the segment
+    if AEnd > LStart then
+    begin
+      LSegments.Add(Copy(AConnectionString, LStart, AEnd - LStart));
+    end;
+  end;
+
+begin
+  LSegments := TList<string>.Create;
   try
-    LConnectionString.Delimiter := ';';
-    LConnectionString.DelimitedText := AConnectionString;
-    Params.AddStrings(LConnectionString);
+    LStart := 1;
+    LDepth := 0;
+    for I := 1 to Length(AConnectionString) do
+    begin
+      case AConnectionString[I] of
+        '{':
+          Inc(LDepth);
+        '}':
+          if LDepth > 0 then
+          begin
+            Dec(LDepth);
+          end;
+        ';':
+          if LDepth = 0 then
+          begin
+            AddSegment(I);
+            LStart := I + 1;
+          end;
+      end;
+    end;
+    AddSegment(Length(AConnectionString) + 1);
+    Result := LSegments.ToArray;
   finally
-    FreeAndNIL(LConnectionString);
+    FreeAndNil(LSegments);
   end;
 end;
 

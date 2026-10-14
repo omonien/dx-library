@@ -7,7 +7,7 @@ Guidance for AI coding agents working in this repository.
 *Assumed - derived from the repository on 2026-10-10 - correct as needed.*
 
 1. **Language** - English for identifiers, XML doc comments, README and commit subjects. Some older comments and commit bodies are German.
-2. **Tests** - yes. DUnitX projects in `Tests/`: `Tests.dproj` (core units, configuration), `TestsNew.dproj` (logger, VCL configuration dialog). Bug fixes test-first.
+2. **Tests** - yes. DUnitX projects in `Tests/`: `Tests.dproj` (core units, configuration), `TestsNew.dproj` (logger, VCL configuration dialog), `DataUtilsTests.dproj` (DX.Data.Utils, Win32 and Win64). Bug fixes test-first.
 3. **License** - MIT (`License.txt`); `README.md` corrected to match (was Mozilla Public License 2.0).
 4. **Project type (Delphi)** - library, consumed as source units via the search path; no packages.
 5. **UI framework** - FMX and VCL; the units live side by side in the repository root.
