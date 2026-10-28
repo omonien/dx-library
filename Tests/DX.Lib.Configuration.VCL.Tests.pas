@@ -179,7 +179,7 @@ begin
       LForm.ValueListEditor.Values['DriverID'] := 'MSSQL';
       LForm.ButtonTestConnectionClick(nil);
       Assert.AreEqual('Server=srv1;DriverID=MSSQL', LReceived);
-      Assert.IsTrue(LForm.MemoTestResult.Text.Contains('REPORT-OK'), LForm.MemoTestResult.Text);
+      Assert.IsTrue(LForm.MemoTestResult.Lines.Text.Contains('REPORT-OK'), LForm.MemoTestResult.Lines.Text);
     finally
       LForm.Free;
     end;
