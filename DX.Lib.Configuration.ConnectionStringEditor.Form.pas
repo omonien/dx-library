@@ -7,18 +7,37 @@ uses
   Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Grids, Vcl.ValEdit, Vcl.ExtCtrls, Vcl.Controls;
 
 type
+  /// <summary>
+  /// Tests a connection string and returns a human-readable report
+  /// (success/failure plus driver details). Must not raise.
+  /// </summary>
+  TConnectionTestFunc = reference to function(const AConnectionString: string): string;
+
   TFormConnectionStringEditor = class(TForm)
     PanelButtons: TPanel;
     ButtonOK: TButton;
     ButtonCancel: TButton;
+    ButtonTestConnection: TButton;
     ValueListEditor: TValueListEditor;
+    MemoTestResult: TMemo;
+    procedure FormCreate(Sender: TObject);
     procedure FormShow(Sender: TObject);
+    procedure ButtonTestConnectionClick(Sender: TObject);
+  private
+    class var FConnectionTester: TConnectionTestFunc;
   private
     FConnectionString: string;
     procedure ParseConnectionString(const AConnectionString: string);
     function BuildConnectionString: string;
   public
     class function Execute(var AConnectionString: string): Boolean;
+    /// <summary>
+    /// Optional application-wide connection test. When assigned, the editor shows a
+    /// "Verbindung testen" button that runs the tester against the connection string
+    /// currently being edited (unsaved values included) and shows its report.
+    /// The library itself stays driver-agnostic - the application plugs in e.g. FireDAC.
+    /// </summary>
+    class property ConnectionTester: TConnectionTestFunc read FConnectionTester write FConnectionTester;
   end;
 
 implementation
@@ -40,9 +59,41 @@ begin
   end;
 end;
 
+procedure TFormConnectionStringEditor.FormCreate(Sender: TObject);
+begin
+  ButtonTestConnection.Visible := Assigned(FConnectionTester);
+  MemoTestResult.Visible := Assigned(FConnectionTester);
+end;
+
 procedure TFormConnectionStringEditor.FormShow(Sender: TObject);
 begin
   ParseConnectionString(FConnectionString);
+end;
+
+procedure TFormConnectionStringEditor.ButtonTestConnectionClick(Sender: TObject);
+var
+  LOldCursor: TCursor;
+begin
+  if not Assigned(FConnectionTester) then
+    Exit;
+  MemoTestResult.Lines.Text := 'Verbindung wird getestet ...';
+  MemoTestResult.Update;
+  LOldCursor := Screen.Cursor;
+  Screen.Cursor := crHourGlass;
+  ButtonTestConnection.Enabled := False;
+  try
+    try
+      MemoTestResult.Lines.Text := FConnectionTester(BuildConnectionString);
+    except
+      // The tester should not raise; if it does, show the error instead of losing the dialog
+      on E: Exception do
+        MemoTestResult.Lines.Text := E.ClassName + ': ' + E.Message;
+    end;
+  finally
+    ButtonTestConnection.Enabled := True;
+    Screen.Cursor := LOldCursor;
+  end;
+  MemoTestResult.SelStart := 0;
 end;
 
 procedure TFormConnectionStringEditor.ParseConnectionString(const AConnectionString: string);

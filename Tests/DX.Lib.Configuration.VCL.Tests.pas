@@ -28,11 +28,24 @@ type
     procedure SectionEditor_BaseValuesAt96PPI;
   end;
 
+  /// <summary>
+  /// Connection test hook of TFormConnectionStringEditor: the button exists only
+  /// with a registered tester, and the tester gets the currently edited values.
+  /// </summary>
+  [TestFixture]
+  TConnectionStringEditorTests = class
+  public
+    [Test]
+    procedure WithoutTester_ButtonHidden;
+    [Test]
+    procedure WithTester_ReceivesEditedValuesAndShowsReport;
+  end;
+
 implementation
 
 uses
   System.SysUtils, Winapi.Windows, VCL.Controls, VCL.ExtCtrls, VCL.ValEdit,
-  DX.Lib.Configuration.VCL;
+  DX.Lib.Configuration.VCL, DX.Lib.Configuration.ConnectionStringEditor.Form;
 
 const
   // 96-DPI-Basiswerte des Dialogs (gepinnt gegen DX.Lib.Configuration.VCL)
@@ -133,8 +146,51 @@ begin
   end;
 end;
 
+procedure TConnectionStringEditorTests.WithoutTester_ButtonHidden;
+var
+  LForm: TFormConnectionStringEditor;
+begin
+  TFormConnectionStringEditor.ConnectionTester := nil;
+  LForm := TFormConnectionStringEditor.Create(nil);
+  try
+    Assert.IsFalse(LForm.ButtonTestConnection.Visible, 'Ohne Tester kein Test-Button');
+    Assert.IsFalse(LForm.MemoTestResult.Visible, 'Ohne Tester kein Ergebnisfeld');
+  finally
+    LForm.Free;
+  end;
+end;
+
+procedure TConnectionStringEditorTests.WithTester_ReceivesEditedValuesAndShowsReport;
+var
+  LForm: TFormConnectionStringEditor;
+  LReceived: string;
+begin
+  TFormConnectionStringEditor.ConnectionTester :=
+    function(const AConnectionString: string): string
+    begin
+      LReceived := AConnectionString;
+      Result := 'REPORT-OK';
+    end;
+  try
+    LForm := TFormConnectionStringEditor.Create(nil);
+    try
+      Assert.IsTrue(LForm.ButtonTestConnection.Visible, 'Mit Tester muss der Test-Button sichtbar sein');
+      LForm.ValueListEditor.Values['Server'] := 'srv1';
+      LForm.ValueListEditor.Values['DriverID'] := 'MSSQL';
+      LForm.ButtonTestConnectionClick(nil);
+      Assert.AreEqual('Server=srv1;DriverID=MSSQL', LReceived);
+      Assert.IsTrue(LForm.MemoTestResult.Lines.Text.Contains('REPORT-OK'), LForm.MemoTestResult.Lines.Text);
+    finally
+      LForm.Free;
+    end;
+  finally
+    TFormConnectionStringEditor.ConnectionTester := nil;
+  end;
+end;
+
 initialization
 
 TDUnitX.RegisterTestFixture(TConfigurationUIHighDPITests);
+TDUnitX.RegisterTestFixture(TConnectionStringEditorTests);
 
 end.

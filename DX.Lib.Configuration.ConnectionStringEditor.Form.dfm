@@ -2,7 +2,7 @@ object FormConnectionStringEditor: TFormConnectionStringEditor
   Left = 0
   Top = 0
   Caption = 'Connection String bearbeiten'
-  ClientHeight = 400
+  ClientHeight = 560
   ClientWidth = 600
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -11,15 +11,25 @@ object FormConnectionStringEditor: TFormConnectionStringEditor
   Font.Name = 'Segoe UI'
   Font.Size = 9
   Position = poOwnerFormCenter
+  OnCreate = FormCreate
   OnShow = FormShow
   object PanelButtons: TPanel
     Left = 0
-    Top = 359
+    Top = 519
     Width = 600
     Height = 41
     Align = alBottom
     BevelOuter = bvNone
-    TabOrder = 1
+    TabOrder = 2
+    object ButtonTestConnection: TButton
+      Left = 8
+      Top = 8
+      Width = 130
+      Height = 25
+      Caption = 'Verbindung testen'
+      TabOrder = 2
+      OnClick = ButtonTestConnectionClick
+    end
     object ButtonOK: TButton
       Left = 432
       Top = 8
@@ -55,5 +65,22 @@ object FormConnectionStringEditor: TFormConnectionStringEditor
     ColWidths = (
       200
       394)
+  end
+  object MemoTestResult: TMemo
+    Left = 0
+    Top = 359
+    Width = 600
+    Height = 160
+    Align = alBottom
+    Font.Charset = DEFAULT_CHARSET
+    Font.Color = clWindowText
+    Font.Height = -12
+    Font.Name = 'Consolas'
+    Font.Style = []
+    ParentFont = False
+    ReadOnly = True
+    ScrollBars = ssBoth
+    TabOrder = 1
+    WordWrap = False
   end
 end
