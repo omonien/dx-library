@@ -39,13 +39,27 @@ type
     procedure WithoutTester_ButtonHidden;
     [Test]
     procedure WithTester_ReceivesEditedValuesAndShowsReport;
+    /// <summary>
+    /// Values that contain a space, ';' or '"' are quoted as a whole pair and
+    /// come back unchanged. SetParamsFromConnectionString of that string yields
+    /// the same password.
+    /// </summary>
+    [Test]
+    procedure QuotedValuesRoundTripAndSurviveParams;
+    /// <summary>
+    /// Unquoted legacy strings keep spaces in values, and keys may still be trimmed.
+    /// </summary>
+    [Test]
+    procedure ParseKeepsUnquotedValueText;
   end;
 
 implementation
 
 uses
   System.SysUtils, Winapi.Windows, VCL.Controls, VCL.ExtCtrls, VCL.ValEdit,
-  DX.Lib.Configuration.VCL, DX.Lib.Configuration.ConnectionStringEditor.Form;
+  FireDAC.Comp.Client,
+  DX.Lib.Configuration.VCL, DX.Lib.Configuration.ConnectionStringEditor.Form,
+  DX.Data.Utils;
 
 const
   // 96-DPI-Basiswerte des Dialogs (gepinnt gegen DX.Lib.Configuration.VCL)
@@ -57,6 +71,7 @@ const
 type
   // Zugriff auf die protected Factory-Methoden des Dialogs
   TConfigurationUIAccess = class(TConfigurationUI);
+  TConnectionStringEditorAccess = class(TFormConnectionStringEditor);
 
 function CreateFormAtPPI(APPI: Integer): TConfigurationUIAccess;
 begin
@@ -185,6 +200,65 @@ begin
     end;
   finally
     TFormConnectionStringEditor.ConnectionTester := nil;
+  end;
+end;
+
+procedure TConnectionStringEditorTests.QuotedValuesRoundTripAndSurviveParams;
+const
+  cPasswords: array[0..3] of string = ('my secret', ' lead', 'a;b', 'a"b');
+var
+  LForm: TConnectionStringEditorAccess;
+  LPassword, LBuilt, LExpected: string;
+  LConnection: TFDConnection;
+begin
+  TFormConnectionStringEditor.ConnectionTester := nil;
+  LForm := TConnectionStringEditorAccess.Create(nil);
+  try
+    for LPassword in cPasswords do
+    begin
+      LForm.ValueListEditor.Strings.Clear;
+      LForm.ValueListEditor.Values['User_Name'] := 'sysdba';
+      LForm.ValueListEditor.Values['Password'] := LPassword;
+      LBuilt := LForm.BuildConnectionString;
+      LExpected := 'User_Name=sysdba;' + AnsiQuotedStr('Password=' + LPassword, '"');
+      Assert.AreEqual(LExpected, LBuilt, 'built string for [' + LPassword + ']');
+
+      LForm.ParseConnectionString(LBuilt);
+      Assert.AreEqual('sysdba', LForm.ValueListEditor.Values['User_Name'],
+        'parsed user for [' + LPassword + ']');
+      Assert.AreEqual(LPassword, LForm.ValueListEditor.Values['Password'],
+        'parsed password [' + LPassword + ']');
+
+      LConnection := TFDConnection.Create(nil);
+      try
+        LConnection.SetParamsFromConnectionString(LBuilt);
+        Assert.AreEqual('sysdba', LConnection.Params.Values['User_Name'],
+          'params user for [' + LPassword + ']');
+        Assert.AreEqual(LPassword, LConnection.Params.Values['Password'],
+          'params password [' + LPassword + ']');
+      finally
+        LConnection.Free;
+      end;
+    end;
+  finally
+    LForm.Free;
+  end;
+end;
+
+procedure TConnectionStringEditorTests.ParseKeepsUnquotedValueText;
+var
+  LForm: TConnectionStringEditorAccess;
+begin
+  LForm := TConnectionStringEditorAccess.Create(nil);
+  try
+    LForm.ParseConnectionString(
+      'Database=C:\My Data\Test.fdb; Password= lead;ODBCAdvanced={A=1;B=2}');
+    Assert.AreEqual('C:\My Data\Test.fdb', LForm.ValueListEditor.Values['Database']);
+    // The key is trimmed; the leading space in the value is part of the value.
+    Assert.AreEqual(' lead', LForm.ValueListEditor.Values['Password']);
+    Assert.AreEqual('{A=1;B=2}', LForm.ValueListEditor.Values['ODBCAdvanced']);
+  finally
+    LForm.Free;
   end;
 end;
 
