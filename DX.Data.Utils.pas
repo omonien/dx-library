@@ -47,9 +47,12 @@ type
   /// Splits a FireDAC connection string into its "Name=Value" segments.
   /// </summary>
   /// <remarks>
-  /// Segments are separated by ";" only. A ";" inside a {...} block is part of the
-  /// value, and the braces are kept verbatim (e.g. ODBCAdvanced={a;b}). Quotes have no
-  /// special meaning, nothing is trimmed and empty segments are skipped.
+  /// Segments are separated by ";". A ";" inside a {...} block is part of the
+  /// value, and the braces are kept verbatim (e.g. ODBCAdvanced={a;b}).
+  /// A segment that starts with " is a quoted Name=Value pair (AnsiQuotedStr of the
+  /// whole pair): the wrapping quotes are removed, "" is an escaped quote, and a ";"
+  /// inside the quotes is not a separator. Quotes that do not wrap the segment have
+  /// no special meaning. Nothing is trimmed and empty segments are skipped.
   /// </remarks>
   function SplitConnectionString(const AConnectionString: string): TArray<string>;
 
@@ -142,27 +145,54 @@ end;
 function SplitConnectionString(const AConnectionString: string): TArray<string>;
 var
   LSegments: TList<string>;
-  LStart: Integer;
-  LDepth: Integer;
   I: Integer;
 
-  procedure AddSegment(AEnd: Integer);
+  procedure AddSegment(const ASegment: string);
   begin
-    // AEnd is the index after the last character of the segment
-    if AEnd > LStart then
+    if ASegment <> '' then
     begin
-      LSegments.Add(Copy(AConnectionString, LStart, AEnd - LStart));
+      LSegments.Add(ASegment);
     end;
   end;
 
-begin
-  LSegments := TList<string>.Create;
-  try
-    LStart := 1;
-    LDepth := 0;
-    for I := 1 to Length(AConnectionString) do
+  // AIndex points at the opening quote. "" inside the pair is one literal quote.
+  function ReadQuoted(var AIndex: Integer): string;
+  begin
+    Inc(AIndex);
+    Result := '';
+    while AIndex <= Length(AConnectionString) do
     begin
-      case AConnectionString[I] of
+      if AConnectionString[AIndex] = '"' then
+      begin
+        if (AIndex < Length(AConnectionString)) and (AConnectionString[AIndex + 1] = '"') then
+        begin
+          Result := Result + '"';
+          Inc(AIndex, 2);
+        end
+        else
+        begin
+          Inc(AIndex);
+          Exit;
+        end;
+      end
+      else
+      begin
+        Result := Result + AConnectionString[AIndex];
+        Inc(AIndex);
+      end;
+    end;
+  end;
+
+  function ReadPlain(var AIndex: Integer): string;
+  var
+    LStart: Integer;
+    LDepth: Integer;
+  begin
+    LStart := AIndex;
+    LDepth := 0;
+    while AIndex <= Length(AConnectionString) do
+    begin
+      case AConnectionString[AIndex] of
         '{':
           Inc(LDepth);
         '}':
@@ -173,12 +203,33 @@ begin
         ';':
           if LDepth = 0 then
           begin
-            AddSegment(I);
-            LStart := I + 1;
+            Break;
           end;
       end;
+      Inc(AIndex);
     end;
-    AddSegment(Length(AConnectionString) + 1);
+    Result := Copy(AConnectionString, LStart, AIndex - LStart);
+  end;
+
+begin
+  LSegments := TList<string>.Create;
+  try
+    I := 1;
+    while I <= Length(AConnectionString) do
+    begin
+      if AConnectionString[I] = '"' then
+      begin
+        AddSegment(ReadQuoted(I));
+      end
+      else
+      begin
+        AddSegment(ReadPlain(I));
+      end;
+      if (I <= Length(AConnectionString)) and (AConnectionString[I] = ';') then
+      begin
+        Inc(I);
+      end;
+    end;
     Result := LSegments.ToArray;
   finally
     FreeAndNil(LSegments);

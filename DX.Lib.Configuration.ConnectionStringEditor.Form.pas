@@ -27,6 +27,7 @@ type
     class var FConnectionTester: TConnectionTestFunc;
   private
     FConnectionString: string;
+  protected
     procedure ParseConnectionString(const AConnectionString: string);
     function BuildConnectionString: string;
   public
@@ -98,41 +99,98 @@ end;
 
 procedure TFormConnectionStringEditor.ParseConnectionString(const AConnectionString: string);
 var
-  LParts: TStringList;
-  LPart, LKey, LValue: string;
-  LPos: Integer;
+  I, LPos: Integer;
+  LKey, LValue, LPart: string;
+
+  procedure AddPair(const APair: string);
+  begin
+    LPos := Pos('=', APair);
+    if LPos > 0 then
+    begin
+      // Keys may be trimmed. Values stay verbatim, including leading spaces.
+      LKey := Copy(APair, 1, LPos - 1).Trim;
+      LValue := Copy(APair, LPos + 1, MaxInt);
+      if LKey <> '' then
+        ValueListEditor.Values[LKey] := LValue;
+    end;
+  end;
+
+  // AIndex points at the opening quote. "" inside the pair is one literal quote.
+  function ReadQuoted(var AIndex: Integer): string;
+  begin
+    Inc(AIndex);
+    Result := '';
+    while AIndex <= Length(AConnectionString) do
+    begin
+      if AConnectionString[AIndex] = '"' then
+      begin
+        if (AIndex < Length(AConnectionString)) and (AConnectionString[AIndex + 1] = '"') then
+        begin
+          Result := Result + '"';
+          Inc(AIndex, 2);
+        end
+        else
+        begin
+          Inc(AIndex);
+          Exit;
+        end;
+      end
+      else
+      begin
+        Result := Result + AConnectionString[AIndex];
+        Inc(AIndex);
+      end;
+    end;
+  end;
+
+  // ';' inside {...} is part of the value, same as SplitConnectionString.
+  function ReadPlain(var AIndex: Integer): string;
+  var
+    LStart, LDepth: Integer;
+  begin
+    LStart := AIndex;
+    LDepth := 0;
+    while AIndex <= Length(AConnectionString) do
+    begin
+      case AConnectionString[AIndex] of
+        '{':
+          Inc(LDepth);
+        '}':
+          if LDepth > 0 then
+            Dec(LDepth);
+        ';':
+          if LDepth = 0 then
+            Break;
+      end;
+      Inc(AIndex);
+    end;
+    Result := Copy(AConnectionString, LStart, AIndex - LStart);
+  end;
+
 begin
   ValueListEditor.Strings.Clear;
 
   if AConnectionString.Trim = '' then
     Exit;
 
-  LParts := TStringList.Create;
-  try
-    LParts.Delimiter := ';';
-    LParts.StrictDelimiter := True;
-    LParts.DelimitedText := AConnectionString;
-
-    for LPart in LParts do
-    begin
-      LPos := Pos('=', LPart);
-      if LPos > 0 then
-      begin
-        LKey := Copy(LPart, 1, LPos - 1).Trim;
-        LValue := Copy(LPart, LPos + 1, MaxInt).Trim;
-        if LKey <> '' then
-          ValueListEditor.Values[LKey] := LValue;
-      end;
-    end;
-  finally
-    LParts.Free;
+  I := 1;
+  while I <= Length(AConnectionString) do
+  begin
+    if AConnectionString[I] = '"' then
+      LPart := ReadQuoted(I)
+    else
+      LPart := ReadPlain(I);
+    if LPart <> '' then
+      AddPair(LPart);
+    if (I <= Length(AConnectionString)) and (AConnectionString[I] = ';') then
+      Inc(I);
   end;
 end;
 
 function TFormConnectionStringEditor.BuildConnectionString: string;
 var
   I: Integer;
-  LKey, LValue: string;
+  LKey, LValue, LPair: string;
   LParts: TStringList;
 begin
   LParts := TStringList.Create;
@@ -142,11 +200,27 @@ begin
       LKey := ValueListEditor.Strings.Names[I];
       LValue := ValueListEditor.Values[LKey];
       if (LKey <> '') and (LValue <> '') then
-        LParts.Add(LKey + '=' + LValue);
+      begin
+        LPair := LKey + '=' + LValue;
+        // Quote the whole pair, not only the value. A non-strict TStringList
+        // (Delimiter=';') treats space as a delimiter and honors '"' only when
+        // it is the first character of a segment. AnsiQuotedStr escapes '"' as '""'.
+        if (Pos(' ', LValue) > 0) or (Pos(';', LValue) > 0) or (Pos('"', LValue) > 0) then
+          LParts.Add(AnsiQuotedStr(LPair, '"'))
+        else
+          LParts.Add(LPair);
+      end;
     end;
     LParts.Delimiter := ';';
     LParts.StrictDelimiter := True;
-    Result := LParts.DelimitedText;
+    // Reading DelimitedText would quote again any item that already contains '"' or ';'.
+    Result := '';
+    for I := 0 to LParts.Count - 1 do
+    begin
+      if I > 0 then
+        Result := Result + LParts.Delimiter;
+      Result := Result + LParts[I];
+    end;
   finally
     LParts.Free;
   end;

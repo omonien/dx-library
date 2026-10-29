@@ -37,6 +37,8 @@ type
     [Test]
     procedure EmptyString;
     [Test]
+    procedure QuotedWholePairs;
+    [Test]
     procedure ConnectionHelperSetsParams;
   end;
 
@@ -97,6 +99,16 @@ end;
 procedure TConnectionStringTests.EmptyString;
 begin
   CheckSegments('', []);
+end;
+
+procedure TConnectionStringTests.QuotedWholePairs;
+begin
+  CheckSegments('"Password=my secret"', ['Password=my secret']);
+  CheckSegments('"Password= lead"', ['Password= lead']);
+  CheckSegments('"Password=a;b"', ['Password=a;b']);
+  CheckSegments('"Password=a""b"', ['Password=a"b']);
+  CheckSegments('User_Name=sysdba;"Password=a;b";Server=db',
+    ['User_Name=sysdba', 'Password=a;b', 'Server=db']);
 end;
 
 procedure TConnectionStringTests.ConnectionHelperSetsParams;
